@@ -962,8 +962,9 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit, block** init_labels,
     CHECK_ALLOC((*init_labels) = new block[garbled_circuit.get_init_size() * 2]);
     for (uint i = 0; i < garbled_circuit.get_init_size(); i++) {
 #ifdef HW_ACLRTR
-	getline(fin, label);
-	Str2Block(label, init_labels[i * 2 + 0]);
+	fin >> label;
+	Str2Block(label, &(*init_labels)[i * 2 + 0]);
+	printBlock((*init_labels)[i * 2 + 0]);
 #else
       (*init_labels)[i * 2 + 0] = RandomBlock();
 #endif
@@ -981,8 +982,14 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit, block** init_labels,
             * garbled_circuit.get_input_size() * 2]);
     for (uint cid = 0; cid < clock_cycles; cid++) {
       for (uint i = 0; i < garbled_circuit.get_input_size(); i++) {
+#ifdef HW_ACLRTR
+	fin >> label;
+	Str2Block(label, &(*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0]);
+	printBlock((*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0]);
+#else
         (*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0] =
             RandomBlock();
+#endif
         (*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 1] =
             XorBlock(
                 R,
