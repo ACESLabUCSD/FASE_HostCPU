@@ -49,6 +49,8 @@ using std::string;
 
 #define IsSecret(X) ((X) < 0)
 
+#define HW_ACLRTR
+
 /**
  * @brief Used to store two labels.
  */

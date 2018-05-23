@@ -47,6 +47,10 @@
 #include "util/common.h"
 #include "util/util.h"
 
+#ifdef HW_ACLRTR
+using std::ifstream;
+#endif
+
 int GarbleBNHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
                     BIGNUM* p_input, BIGNUM* g_init, BIGNUM* g_input,
                     uint64_t* clock_cycles, const string& output_mask,
@@ -942,12 +946,27 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit, block** init_labels,
                      block** input_labels, block** output_labels,
                      short** output_vals, block R, uint64_t clock_cycles) {
 
+#ifdef HW_ACLRTR
+	string label_file("Labels.txt");
+	ifstream fin(label_file.c_str(), std::ios::in);
+	if (!fin.good()) {
+		LOG(ERROR) << "file not found:" << label_file << endl;
+		return -1;
+	}
+	string label = "";
+#endif
+					 
 // allocate and generate random init and inputs label pairs
   (*init_labels) = nullptr;
   if (garbled_circuit.get_init_size() > 0) {
     CHECK_ALLOC((*init_labels) = new block[garbled_circuit.get_init_size() * 2]);
     for (uint i = 0; i < garbled_circuit.get_init_size(); i++) {
+#ifdef HW_ACLRTR
+	getline(fin, label);
+	Str2Block(label, init_labels[i * 2 + 0]);
+#else
       (*init_labels)[i * 2 + 0] = RandomBlock();
+#endif
       (*init_labels)[i * 2 + 1] = XorBlock(R, (*init_labels)[i * 2 + 0]);
     }
   }
