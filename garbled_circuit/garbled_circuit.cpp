@@ -54,7 +54,11 @@ int GarbleStr(const string& scd_file_address, const string& p_init_str,
               const string& input_str, uint64_t clock_cycles,
               const string& output_mask, int64_t terminate_period,
               OutputMode output_mode, bool disable_OT, bool low_mem_foot,
-              string* output_str, int connfd) {
+              string* output_str, int connfd
+#ifdef HW_ACLRTR					
+			  , bool aclrtr, string acc_file_address
+#endif					
+					) {
   if (clock_cycles == 0) {
     return FAILURE;
   }
@@ -111,7 +115,11 @@ int GarbleStr(const string& scd_file_address, const string& p_init_str,
         GarbleBNHighMem(garbled_circuit, p_init, p_input, g_init, g_input,
                         &clock_cycles, output_mask, terminate_period,
                         output_mode, output_bn, R, global_key, disable_OT,
-                        connfd));
+                        connfd
+#ifdef HW_ACLRTR					   
+					   , aclrtr, acc_file_address
+#endif						   
+					   ));
     CHECK(
         OutputBN2StrHighMem(garbled_circuit, output_bn, clock_cycles,
                             output_mode, output_str));

@@ -49,7 +49,11 @@ int GarbleStr(const string& scd_file_address, const string& p_init_str,
               const string& input_str, uint64_t clock_cycles,
               const string& output_mask, int64_t terminate_period,
               OutputMode output_mode, bool disable_OT, bool low_mem_foot,
-              string* output_str, int connfd);
+              string* output_str, int connfd
+#ifdef HW_ACLRTR					
+			  , bool aclrtr, string acc_file_address
+#endif					
+					);
 int EvaluateStr(const string& scd_file_address, const string& p_init_str,
                 const string& p_input_str, const string& init_str,
                 const string& input_str, uint64_t clock_cycles,

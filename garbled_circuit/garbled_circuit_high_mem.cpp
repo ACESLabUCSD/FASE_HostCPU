@@ -56,7 +56,11 @@ int GarbleBNHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
                     uint64_t* clock_cycles, const string& output_mask,
                     int64_t terminate_period, OutputMode output_mode,
                     BIGNUM* output_bn, block R, block global_key,
-                    bool disable_OT, int connfd) {
+                    bool disable_OT, int connfd
+#ifdef HW_ACLRTR					
+					, bool aclrtr, string acc_file_address
+#endif					
+					) {
 
   block* init_labels = nullptr;
   block* input_labels = nullptr;
@@ -66,7 +70,11 @@ int GarbleBNHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
   // allocate init and input values and translate form string
   CHECK(
       GarbleMakeLabels(garbled_circuit, &init_labels, &input_labels,
-                       &output_labels, &output_vals, R, *clock_cycles));
+                       &output_labels, &output_vals, R, *clock_cycles
+#ifdef HW_ACLRTR					   
+					   , aclrtr, acc_file_address
+#endif						   
+					   ));
 
   uint64_t ot_start_time = RDTSC;
   {
@@ -944,16 +952,24 @@ int EvaluateTransferLabels(const GarbledCircuit& garbled_circuit,
 
 int GarbleMakeLabels(const GarbledCircuit& garbled_circuit, block** init_labels,
                      block** input_labels, block** output_labels,
-                     short** output_vals, block R, uint64_t clock_cycles) {
+                     short** output_vals, block R, uint64_t clock_cycles
+#ifdef HW_ACLRTR					 
+					 , bool aclrtr, string acc_file_address
+#endif					 
+					 ) {
 
 #ifdef HW_ACLRTR
-	string label_file("Labels.txt");
-	ifstream fin(label_file.c_str(), std::ios::in);
-	if (!fin.good()) {
-		LOG(ERROR) << "file not found:" << label_file << endl;
-		return -1;
-	}
+	string label_file;
+	ifstream fin;
 	string label = "";
+	if(aclrtr){
+		label_file = acc_file_address + "/Labels.txt";
+		fin.open(label_file.c_str(), std::ios::in);
+		if (!fin.good()) {
+			LOG(ERROR) << "file not found:" << label_file << endl;
+			return -1;
+		}
+	}
 #endif
 					 
 // allocate and generate random init and inputs label pairs
@@ -962,12 +978,14 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit, block** init_labels,
     CHECK_ALLOC((*init_labels) = new block[garbled_circuit.get_init_size() * 2]);
     for (uint i = 0; i < garbled_circuit.get_init_size(); i++) {
 #ifdef HW_ACLRTR
-	fin >> label;
-	Str2Block(label, &(*init_labels)[i * 2 + 0]);
-	printBlock((*init_labels)[i * 2 + 0]);
-#else
-      (*init_labels)[i * 2 + 0] = RandomBlock();
+	if(aclrtr){
+		fin >> label;
+		Str2Block(label, &(*init_labels)[i * 2 + 0]);
+		printBlock((*init_labels)[i * 2 + 0]);
+	}
+	else 
 #endif
+      (*init_labels)[i * 2 + 0] = RandomBlock();
       (*init_labels)[i * 2 + 1] = XorBlock(R, (*init_labels)[i * 2 + 0]);
     }
   }
@@ -983,13 +1001,15 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit, block** init_labels,
     for (uint cid = 0; cid < clock_cycles; cid++) {
       for (uint i = 0; i < garbled_circuit.get_input_size(); i++) {
 #ifdef HW_ACLRTR
-	fin >> label;
-	Str2Block(label, &(*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0]);
-	printBlock((*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0]);
-#else
+	if(aclrtr){
+		fin >> label;
+		Str2Block(label, &(*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0]);
+		printBlock((*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0]);
+	}
+	else 
+#endif
         (*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0] =
             RandomBlock();
-#endif
         (*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 1] =
             XorBlock(
                 R,
