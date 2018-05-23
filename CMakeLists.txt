@@ -81,7 +81,7 @@ configure_file (
   "util/tinygarble_config.h")
 ###############
 # Subdirectory
-add_subdirectory ("a23")
+#add_subdirectory ("a23")
 add_subdirectory ("crypto")
 add_subdirectory ("garbled_circuit")
 add_subdirectory ("scd")

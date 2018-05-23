@@ -1,3 +1,0 @@
-deadbeef
-ffffffff
-00000000
