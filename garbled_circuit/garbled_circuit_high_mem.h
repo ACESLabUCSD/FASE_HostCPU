@@ -60,7 +60,11 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
                   BIGNUM* p_input, block* init_labels, block* input_labels,
                   block global_key, block R, uint64_t* clock_cycles,
                   int64_t terminate_period, int connfd, block* output_labels,
-                  short* output_vals);
+                  short* output_vals
+#ifdef HW_ACLRTR					 
+				  , bool aclrtr, string acc_file_address
+#endif					 
+					 );
 int EvaluateHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
                     BIGNUM* p_input, block* init_labels, block* input_labels,
                     block global_key, uint64_t* clock_cycles,
@@ -93,7 +97,11 @@ int EvaluateMakeLabels(const GarbledCircuit& garbled_circuit,
 int GarbleTransferOutput(const GarbledCircuit& garbled_circuit,
                          block* output_labels, short * output_vals,
                          uint64_t clock_cycles, const string& output_mask,
-                         OutputMode output_mode, BIGNUM* output_bn, int connfd);
+                         OutputMode output_mode, BIGNUM* output_bn, int connfd
+#ifdef HW_ACLRTR					 
+						 , bool aclrtr, string acc_file_address
+#endif					 
+					 );
 int EvaluateTransferOutput(const GarbledCircuit& garbled_circuit,
                            block* output_labels, short* output_vals,
                            uint64_t clock_cycles, const string& output_mask,

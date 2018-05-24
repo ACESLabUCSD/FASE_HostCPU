@@ -93,11 +93,19 @@ int GarbleBNHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
 
   GarbleHighMem(garbled_circuit, p_init, p_input, init_labels, input_labels,
                 global_key, R, clock_cycles, terminate_period, connfd,
-                output_labels, output_vals);
+                output_labels, output_vals
+#ifdef HW_ACLRTR					   
+					   , aclrtr, acc_file_address
+#endif						   
+					   );
   CHECK(
       GarbleTransferOutput(garbled_circuit, output_labels, output_vals,
                            *clock_cycles, output_mask, output_mode, output_bn,
-                           connfd));
+                           connfd
+#ifdef HW_ACLRTR					   
+					   , aclrtr, acc_file_address
+#endif						   
+					   ));
   delete[] init_labels;
   delete[] input_labels;
   delete[] output_labels;
@@ -152,7 +160,11 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
                   BIGNUM* p_input, block* init_labels, block* input_labels,
                   block global_key, block R, uint64_t* clock_cycles,
                   int64_t terminate_period, int connfd, block* output_labels,
-                  short* output_vals) {
+                  short* output_vals
+#ifdef HW_ACLRTR					 
+				  , bool aclrtr, string acc_file_address
+#endif					 
+					 ) {
 
   DUMP("r_key") << R << endl;
   DUMP("r_key") << global_key << endl;
@@ -195,7 +207,7 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
   AESSetEncryptKey((unsigned char *) &(global_key), 128, &AES_Key);
   
 #ifdef HW_ACLRTR
-	string key_file(string(TINYGARBLE_SOURCE_DIR)+"/Keys.txt");
+	string key_file(acc_file_address+"/Keys.txt");
 	ofstream fkout;
 	fkout.open(key_file.c_str(), std::ofstream::out);
 	printBlock(R, fkout);
@@ -415,12 +427,12 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
     comm_time += RDTSC - comm_start_time;
 	
 #ifdef HW_ACLRTR
-	string table_file(string(TINYGARBLE_SOURCE_DIR)+"/Tables.txt");
+	string table_file(acc_file_address+"/Tables.txt");
 	ofstream ftout;
 	ftout.open(table_file.c_str(), std::ofstream::out);
 	ftout << cid << endl;
 	for (uint64_t i = 0; i < garbled_table_ind; i++){
-		ftout << garbled_table_ind << endl;
+		ftout << i << endl;
 		printBlock(garbled_tables[i].row[0], ftout);
 		printBlock(garbled_tables[i].row[1], ftout);
 	}
@@ -986,12 +998,12 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit, block** init_labels,
 
 #ifdef HW_ACLRTR
 	string label_file;
-	ifstream fin;
+	ifstream flin;
 	string label = "";
 	if(aclrtr){
 		label_file = acc_file_address + "/Labels.txt";
-		fin.open(label_file.c_str(), std::ios::in);
-		if (!fin.good()) {
+		flin.open(label_file.c_str(), std::ios::in);
+		if (!flin.good()) {
 			LOG(ERROR) << "file not found:" << label_file << endl;
 			return -1;
 		}
@@ -1005,7 +1017,7 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit, block** init_labels,
     for (uint i = 0; i < garbled_circuit.get_init_size(); i++) {
 #ifdef HW_ACLRTR
 	if(aclrtr){
-		fin >> label;
+		flin >> label;
 		Str2Block(label, &(*init_labels)[i * 2 + 0]);
 		printBlock((*init_labels)[i * 2 + 0]);
 	}
@@ -1028,7 +1040,7 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit, block** init_labels,
       for (uint i = 0; i < garbled_circuit.get_input_size(); i++) {
 #ifdef HW_ACLRTR
 	if(aclrtr){
-		fin >> label;
+		flin >> label;
 		Str2Block(label, &(*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0]);
 		printBlock((*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0]);
 	}
@@ -1086,7 +1098,11 @@ int GarbleTransferOutput(const GarbledCircuit& garbled_circuit,
                          block* output_labels, short * output_vals,
                          uint64_t clock_cycles, const string& output_mask,
                          OutputMode output_mode, BIGNUM* output_bn,
-                         int connfd) {
+                         int connfd
+#ifdef HW_ACLRTR					 
+						 , bool aclrtr, string acc_file_address
+#endif					 
+					 ) {
   BIGNUM* output_mask_bn = BN_new();
   BN_hex2bn(&output_mask_bn, output_mask.c_str());
 
