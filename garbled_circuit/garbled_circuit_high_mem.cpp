@@ -208,14 +208,21 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
   
 #ifdef HW_ACLRTR
 	string key_file(acc_file_address+"/Keys.txt");
-	ofstream fkout;
-	fkout.open(key_file.c_str(), std::ofstream::out);
+	ofstream fkout(key_file.c_str(), std::ofstream::out);
 	printBlock(R, fkout);
 	printBlock(global_key, fkout);
 	for (int i = 0; i < 15; i++){
 		printBlock(AES_Key.rd_key[i], fkout);
 	}
 	fkout.close();
+
+	string olabel_file(acc_file_address+"/OLabels.txt");
+	ofstream flout(olabel_file.c_str(), std::ofstream::out);
+	flout << (*clock_cycles) << endl;
+
+	string table_file(acc_file_address+"/Tables.txt");
+	ofstream ftout(table_file.c_str(), std::ofstream::out);
+	ftout << (*clock_cycles) << endl;
 #endif
 
   for (uint64_t cid = 0; cid < (*clock_cycles); cid++) {
@@ -416,6 +423,14 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
       DUMP("output") << wires[garbled_circuit.outputs[i]].label0 << endl;
     }
     garble_time += RDTSC - garble_start_time;
+	
+#ifdef HW_ACLRTR
+	flout << garbled_circuit.output_size << endl;
+	for (uint64_t i = 0; i < garbled_circuit.output_size; i++){
+		printBlock(output_labels[(cid * garbled_circuit.output_size + i) * 2 + 0], flout);
+		printBlock(output_labels[(cid * garbled_circuit.output_size + i) * 2 + 1], flout);
+	}
+#endif
 
     uint64_t comm_start_time = RDTSC;
     {
@@ -427,16 +442,11 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
     comm_time += RDTSC - comm_start_time;
 	
 #ifdef HW_ACLRTR
-	string table_file(acc_file_address+"/Tables.txt");
-	ofstream ftout;
-	ftout.open(table_file.c_str(), std::ofstream::out);
-	ftout << cid << endl;
+	ftout << garbled_table_ind << endl;
 	for (uint64_t i = 0; i < garbled_table_ind; i++){
-		ftout << i << endl;
 		printBlock(garbled_tables[i].row[0], ftout);
 		printBlock(garbled_tables[i].row[1], ftout);
 	}
-	fkout.close();
 #endif
 
     num_skipped_non_xor_gates += num_of_non_xor - garbled_table_ind;
@@ -467,7 +477,11 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
     }
 
   }
-
+#ifdef HW_ACLRTR
+	flout.close();
+	ftout.close();
+#endif
+  
   LOG(INFO) << "Non-secret skipped non-XOR gates = "
       << num_skipped_non_xor_gates << " out of "
       << num_of_non_xor * (*clock_cycles) << "\t ("
@@ -1105,6 +1119,12 @@ int GarbleTransferOutput(const GarbledCircuit& garbled_circuit,
 					 ) {
   BIGNUM* output_mask_bn = BN_new();
   BN_hex2bn(&output_mask_bn, output_mask.c_str());
+  
+#ifdef HW_ACLRTR
+	string olabel_file(acc_file_address+"/OLabels.txt");
+	ofstream flout(olabel_file.c_str(), std::ofstream::out|std::ofstream::app);
+	flout << clock_cycles << endl;
+#endif
 
   for (uint64_t cid = 0; cid < clock_cycles; cid++) {
     for (uint64_t i = 0; i < garbled_circuit.output_size; i++) {
@@ -1118,6 +1138,9 @@ int GarbleTransferOutput(const GarbledCircuit& garbled_circuit,
       } else {
         short garble_output_type = get_LSB(
             output_labels[(cid * garbled_circuit.output_size + i) * 2 + 0]);
+#ifdef HW_ACLRTR
+		    flout << garble_output_type << " ";  
+#endif
         short eval_output_type;
         if (i >= (uint64_t) BN_num_bits(output_mask_bn)
             || BN_is_bit_set(output_mask_bn, i) == 0) {
@@ -1134,6 +1157,9 @@ int GarbleTransferOutput(const GarbledCircuit& garbled_circuit,
       }
     }
   }
+#ifdef HW_ACLRTR
+	flout.close();
+#endif
 
   BN_free(output_mask_bn);
   return SUCCESS;
