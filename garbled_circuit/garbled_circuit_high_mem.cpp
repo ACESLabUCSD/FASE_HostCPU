@@ -49,6 +49,7 @@
 
 #ifdef HW_ACLRTR
 using std::ifstream;
+using std::ofstream;
 #endif
 
 int GarbleBNHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
@@ -192,6 +193,18 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
 
   AES_KEY AES_Key;
   AESSetEncryptKey((unsigned char *) &(global_key), 128, &AES_Key);
+  
+#ifdef HW_ACLRTR
+	string key_file(string(TINYGARBLE_SOURCE_DIR)+"/Keys.txt");
+	ofstream fkout;
+	fkout.open(key_file.c_str(), std::ofstream::out);
+	printBlock(R, fkout);
+	printBlock(global_key, fkout);
+	for (int i = 0; i < 15; i++){
+		printBlock(AES_Key.rd_key[i], fkout);
+	}
+	fkout.close();
+#endif
 
   for (uint64_t cid = 0; cid < (*clock_cycles); cid++) {
     uint64_t garble_start_time = RDTSC;

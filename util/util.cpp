@@ -51,6 +51,7 @@
 #include "util/log.h"
 
 using std::ifstream;
+using std::ofstream;
 
 static block cur_seed;
 
@@ -94,7 +95,14 @@ block RandomBlock() {
 void printBlock(block var)
 {
     uint16_t *val = (uint16_t*) &var;
-    LOG(INFO) << boost::format{"%04x%04x%04x%04x%04x%04x%04x%04x"}%val[7]%val[6]%val[5]%val[4]%val[3]%val[2]%val[1]%val[0] << endl;
+    LOG(INFO) << boost::format{"%04X%04X%04X%04X%04X%04X%04X%04X"}%val[7]%val[6]%val[5]%val[4]%val[3]%val[2]%val[1]%val[0] << endl;
+}
+
+
+void printBlock(block var, ofstream& fout)
+{
+    uint16_t *val = (uint16_t*) &var;
+    fout << boost::format{"%04X%04X%04X%04X%04X%04X%04X%04X"}%val[7]%val[6]%val[5]%val[4]%val[3]%val[2]%val[1]%val[0] << endl;
 }
 /**
  * \brief constant v value based on gate Type

@@ -31,6 +31,7 @@ using std::vector;
 
 block RandomBlock();
 void printBlock(block var);
+void printBlock(block var, std::ofstream& fout);
 void SrandSSE(unsigned int seed);
 unsigned short Type2V(int gateType);
 bool GateOperator(int gateType, bool input0, bool input1 = false);

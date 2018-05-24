@@ -36,3 +36,4 @@ work/*
 scd/netlists/*.v
 scd/netlists/*.scd
 scd/netlists/*.sh
+Keys.txt
