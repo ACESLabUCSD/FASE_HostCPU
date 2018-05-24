@@ -413,6 +413,19 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
                    garbled_table_ind * sizeof(GarbledTable)));
     }
     comm_time += RDTSC - comm_start_time;
+	
+#ifdef HW_ACLRTR
+	string table_file(string(TINYGARBLE_SOURCE_DIR)+"/Tables.txt");
+	ofstream ftout;
+	ftout.open(table_file.c_str(), std::ofstream::out);
+	ftout << cid << endl;
+	for (uint64_t i = 0; i < garbled_table_ind; i++){
+		ftout << garbled_table_ind << endl;
+		printBlock(garbled_tables[i].row[0], ftout);
+		printBlock(garbled_tables[i].row[1], ftout);
+	}
+	fkout.close();
+#endif
 
     num_skipped_non_xor_gates += num_of_non_xor - garbled_table_ind;
 
