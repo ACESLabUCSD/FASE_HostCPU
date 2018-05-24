@@ -253,7 +253,7 @@ int main(int argc, char* argv[]) {
   if (vm.count("acc")) {
     aclrtr = true;
 	if(acc_file_address.length() == 0)
-		acc_file_address = string(TINYGARBLE_SOURCE_DIR);
+		acc_file_address = string(TINYGARBLE_SOURCE_DIR)+"/hw_aclrtr";
     LOG(INFO) << "Looking for HW accelerator generated garbled tables at " << acc_file_address
               << endl;
   }
