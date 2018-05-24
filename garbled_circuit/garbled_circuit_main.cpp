@@ -155,7 +155,7 @@ int main(int argc, char* argv[]) {
   bool low_mem_foot = false;
 #ifdef HW_ACLRTR	
   bool aclrtr = false;
-  string acc_file_address;
+  string acc_file_address = "";
 #endif					
 					
   boost::format fmter(
@@ -250,10 +250,11 @@ int main(int argc, char* argv[]) {
               << endl;
   }
 #ifdef HW_ACLRTR  
+  if(acc_file_address.length() == 0){
+    acc_file_address = string(TINYGARBLE_SOURCE_DIR)+"/hw_aclrtr";
+  }
   if (vm.count("acc")) {
     aclrtr = true;
-	if(acc_file_address.length() == 0)
-		acc_file_address = string(TINYGARBLE_SOURCE_DIR)+"/hw_aclrtr";
     LOG(INFO) << "Looking for HW accelerator generated garbled tables at " << acc_file_address
               << endl;
   }

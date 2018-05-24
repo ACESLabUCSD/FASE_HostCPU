@@ -168,6 +168,42 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
 
   DUMP("r_key") << R << endl;
   DUMP("r_key") << global_key << endl;
+  
+#ifdef HW_ACLRTR
+	if(aclrtr){
+		string table_file(acc_file_address+"/Tables.txt");
+		ifstream ftin;
+		string rows = "";
+		ftin.open(table_file.c_str(), std::ios::in);
+		if (!ftin.good()) {
+			LOG(ERROR) << "file not found:" << table_file << endl;
+			return -1;
+		}
+		
+		uint64_t garbled_tables_size;
+		ftin >> garbled_tables_size;
+		GarbledTable* garbled_tables = nullptr;
+		CHECK_ALLOC(garbled_tables = new GarbledTable[garbled_tables_size]);
+		
+		for (uint64_t cid = 0; cid < (*clock_cycles); cid++) {
+			for (uint64_t i = 0; i < garbled_tables_size; i++) {
+				ftin >> rows;
+				Str2Block(rows, &garbled_tables[i].row[0]);
+				LOG(INFO) << "garbled_tables[" << i <<"].row[0]:\t";
+				printBlock(garbled_tables[i].row[0]);
+				ftin >> rows;
+				Str2Block(rows, &garbled_tables[i].row[1]);
+				LOG(INFO) << "garbled_tables[" << i <<"].row[1]:\t";
+				printBlock(garbled_tables[i].row[1]);
+			}
+			CHECK(SendData(connfd, &garbled_tables_size, sizeof(uint64_t)));
+			CHECK(
+			  SendData(connfd, garbled_tables,
+					   garbled_tables_size * sizeof(GarbledTable)));		
+		}
+	}
+	else{
+#endif
 
   BlockPair *wires = nullptr;
   CHECK_ALLOC(wires = new BlockPair[garbled_circuit.get_wire_size()]);
@@ -207,22 +243,14 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
   AESSetEncryptKey((unsigned char *) &(global_key), 128, &AES_Key);
   
 #ifdef HW_ACLRTR
-	/*string key_file(acc_file_address+"/Keys.txt");
-	ofstream fkout(key_file.c_str(), std::ofstream::out);
-	printBlock(R, fkout);
-	printBlock(global_key, fkout);
-	for (int i = 0; i < 15; i++){
-		printBlock(AES_Key.rd_key[i], fkout);
-	}
-	fkout.close();*/
-
 	string olabel_file(acc_file_address+"/OLabels.txt");
-	ofstream flout(olabel_file.c_str(), std::ofstream::out);
-	flout << (*clock_cycles) << endl;
+	ofstream flout;
+	flout.open(olabel_file.c_str(), std::ofstream::out);
+	flout << garbled_circuit.output_size << endl;
 
 	string table_file(acc_file_address+"/Tables.txt");
-	ofstream ftout(table_file.c_str(), std::ofstream::out);
-	ftout << (*clock_cycles) << endl;
+	ofstream ftout;
+	ftout.open(table_file.c_str(), std::ofstream::out);
 #endif
 
   for (uint64_t cid = 0; cid < (*clock_cycles); cid++) {
@@ -425,7 +453,6 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
     garble_time += RDTSC - garble_start_time;
 	
 #ifdef HW_ACLRTR
-	flout << garbled_circuit.output_size << endl;
 	for (uint64_t i = 0; i < garbled_circuit.output_size; i++){
 		printBlock(output_labels[(cid * garbled_circuit.output_size + i) * 2 + 0], flout);
 		printBlock(output_labels[(cid * garbled_circuit.output_size + i) * 2 + 1], flout);
@@ -442,7 +469,9 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
     comm_time += RDTSC - comm_start_time;
 	
 #ifdef HW_ACLRTR
-	ftout << garbled_table_ind << endl;
+	if (cid == 0) {
+		ftout << garbled_table_ind << endl;
+	}
 	for (uint64_t i = 0; i < garbled_table_ind; i++){
 		printBlock(garbled_tables[i].row[0], ftout);
 		printBlock(garbled_tables[i].row[1], ftout);
@@ -501,6 +530,9 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
   delete[] fanout;
   delete[] garbled_tables;
   delete[] garbled_tables_temp;
+#ifdef HW_ACLRTR
+	}
+#endif
   return SUCCESS;
 }
 
@@ -1116,13 +1148,36 @@ int GarbleTransferOutput(const GarbledCircuit& garbled_circuit,
 						 , bool aclrtr, string acc_file_address
 #endif					 
 					 ) {
+#ifdef HW_ACLRTR
+	if(aclrtr){
+		string omask_file(acc_file_address+"/OMasks.txt");
+		ifstream fmin;		
+		fmin.open(omask_file.c_str(), std::ios::in);
+		if (!fmin.good()) {
+			LOG(ERROR) << "file not found:" << omask_file << endl;
+			return -1;
+		}
+		
+		uint64_t output_size;
+		fmin >> output_size;
+		short garble_output_type;
+		
+		for (uint64_t cid = 0; cid < clock_cycles; cid++) {
+			for (uint64_t i = 0; i < output_size; i++) {
+				fmin >> garble_output_type;
+				CHECK(SendData(connfd, &garble_output_type, sizeof(short)));
+			}			
+		}
+	}
+	else{
+#endif
   BIGNUM* output_mask_bn = BN_new();
   BN_hex2bn(&output_mask_bn, output_mask.c_str());
   
 #ifdef HW_ACLRTR
 	string omask_file(acc_file_address+"/OMasks.txt");
-	ofstream fmout(omask_file.c_str(), std::ofstream::out);
-	fmout << clock_cycles << endl;
+	ofstream fmout;
+	fmout.open(omask_file.c_str(), std::ofstream::out);
 #endif
 
   for (uint64_t cid = 0; cid < clock_cycles; cid++) {
@@ -1164,6 +1219,9 @@ int GarbleTransferOutput(const GarbledCircuit& garbled_circuit,
 #endif
 
   BN_free(output_mask_bn);
+#ifdef HW_ACLRTR
+	}
+#endif 
   return SUCCESS;
 }
 
