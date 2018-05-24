@@ -49,6 +49,11 @@
 #include "util/common.h"
 #include "util/util.h"
 
+#ifdef HW_ACLRTR
+using std::ifstream;
+using std::ofstream;
+#endif
+
 int GarbleStr(const string& scd_file_address, const string& p_init_str,
               const string& p_input_str, const string& init_str,
               const string& input_str, uint64_t clock_cycles,
@@ -77,9 +82,6 @@ int GarbleStr(const string& scd_file_address, const string& p_init_str,
     return FAILURE;
   }
 
-  block R = RandomBlock();  // secret label
-  *((short *) (&R)) |= 1;
-
   // parse init and input
   BIGNUM* p_init = BN_new();
   BIGNUM* p_input = BN_new();
@@ -95,8 +97,31 @@ int GarbleStr(const string& scd_file_address, const string& p_init_str,
                         garbled_circuit.p_input_size, clock_cycles, &p_init,
                         &p_input));
 
-  // global key
-  block global_key = RandomBlock();
+
+	block R;
+	block global_key;
+#ifdef HW_ACLRTR 
+	string key_file(acc_file_address+"/Keys.txt");
+	ifstream fkin(key_file.c_str(), std::ios::in);
+	if (!fkin.good()) {
+		LOG(ERROR) << "file not found:" << key_file << endl;
+		return -1;
+	}
+	string keys = "";
+	fkin >> keys;
+	Str2Block(keys, &R);
+	LOG(INFO) << "R:\t";
+	printBlock(R);
+	fkin >> keys;
+	Str2Block(keys, &global_key);
+	LOG(INFO) << "global_key:\t";
+	printBlock(global_key);
+	fkin.close();
+#else
+  R = RandomBlock();  // secret label
+  *((short *) (&R)) |= 1;
+  global_key = RandomBlock();  // global key
+#endif
   CHECK(SendData(connfd, &global_key, sizeof(block)));  // send global key
 
   if (low_mem_foot && clock_cycles > 1) {

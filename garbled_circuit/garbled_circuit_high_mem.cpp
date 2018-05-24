@@ -207,14 +207,14 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
   AESSetEncryptKey((unsigned char *) &(global_key), 128, &AES_Key);
   
 #ifdef HW_ACLRTR
-	string key_file(acc_file_address+"/Keys.txt");
+	/*string key_file(acc_file_address+"/Keys.txt");
 	ofstream fkout(key_file.c_str(), std::ofstream::out);
 	printBlock(R, fkout);
 	printBlock(global_key, fkout);
 	for (int i = 0; i < 15; i++){
 		printBlock(AES_Key.rd_key[i], fkout);
 	}
-	fkout.close();
+	fkout.close();*/
 
 	string olabel_file(acc_file_address+"/OLabels.txt");
 	ofstream flout(olabel_file.c_str(), std::ofstream::out);
@@ -1014,13 +1014,11 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit, block** init_labels,
 	string label_file;
 	ifstream flin;
 	string label = "";
-	if(aclrtr){
-		label_file = acc_file_address + "/Labels.txt";
-		flin.open(label_file.c_str(), std::ios::in);
-		if (!flin.good()) {
-			LOG(ERROR) << "file not found:" << label_file << endl;
-			return -1;
-		}
+	label_file = acc_file_address + "/Labels.txt";
+	flin.open(label_file.c_str(), std::ios::in);
+	if (!flin.good()) {
+		LOG(ERROR) << "file not found:" << label_file << endl;
+		return -1;
 	}
 #endif
 					 
@@ -1030,14 +1028,13 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit, block** init_labels,
     CHECK_ALLOC((*init_labels) = new block[garbled_circuit.get_init_size() * 2]);
     for (uint i = 0; i < garbled_circuit.get_init_size(); i++) {
 #ifdef HW_ACLRTR
-	if(aclrtr){
 		flin >> label;
 		Str2Block(label, &(*init_labels)[i * 2 + 0]);
+		LOG(INFO) << "init_labels[" << i * 2 + 0 << "]:\t";
 		printBlock((*init_labels)[i * 2 + 0]);
-	}
-	else 
-#endif
+#else
       (*init_labels)[i * 2 + 0] = RandomBlock();
+#endif
       (*init_labels)[i * 2 + 1] = XorBlock(R, (*init_labels)[i * 2 + 0]);
     }
   }
@@ -1053,15 +1050,14 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit, block** init_labels,
     for (uint cid = 0; cid < clock_cycles; cid++) {
       for (uint i = 0; i < garbled_circuit.get_input_size(); i++) {
 #ifdef HW_ACLRTR
-	if(aclrtr){
 		flin >> label;
 		Str2Block(label, &(*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0]);
+		LOG(INFO) << "input_labels[" << (cid * garbled_circuit.get_input_size() + i) * 2 + 0 << "]:\t";
 		printBlock((*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0]);
-	}
-	else 
-#endif
+#else
         (*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0] =
             RandomBlock();
+#endif
         (*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 1] =
             XorBlock(
                 R,
@@ -1070,6 +1066,9 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit, block** init_labels,
       }
     }
   }
+#ifdef HW_ACLRTR
+	flin.close();
+#endif
   if (garbled_circuit.output_size > 0) {
     CHECK_ALLOC(
         (*output_labels) = new block[clock_cycles * garbled_circuit.output_size
@@ -1121,12 +1120,15 @@ int GarbleTransferOutput(const GarbledCircuit& garbled_circuit,
   BN_hex2bn(&output_mask_bn, output_mask.c_str());
   
 #ifdef HW_ACLRTR
-	string olabel_file(acc_file_address+"/OLabels.txt");
-	ofstream flout(olabel_file.c_str(), std::ofstream::out|std::ofstream::app);
-	flout << clock_cycles << endl;
+	string omask_file(acc_file_address+"/OMasks.txt");
+	ofstream fmout(omask_file.c_str(), std::ofstream::out);
+	fmout << clock_cycles << endl;
 #endif
 
   for (uint64_t cid = 0; cid < clock_cycles; cid++) {
+#ifdef HW_ACLRTR
+	fmout << garbled_circuit.output_size << endl;  
+#endif
     for (uint64_t i = 0; i < garbled_circuit.output_size; i++) {
       if (output_vals[cid * garbled_circuit.output_size + i] == 0) {
         BN_clear_bit(output_bn, cid * garbled_circuit.output_size + i);
@@ -1139,7 +1141,7 @@ int GarbleTransferOutput(const GarbledCircuit& garbled_circuit,
         short garble_output_type = get_LSB(
             output_labels[(cid * garbled_circuit.output_size + i) * 2 + 0]);
 #ifdef HW_ACLRTR
-		    flout << garble_output_type << " ";  
+		    fmout << garble_output_type << endl;  
 #endif
         short eval_output_type;
         if (i >= (uint64_t) BN_num_bits(output_mask_bn)
@@ -1158,7 +1160,7 @@ int GarbleTransferOutput(const GarbledCircuit& garbled_circuit,
     }
   }
 #ifdef HW_ACLRTR
-	flout.close();
+	fmout.close();
 #endif
 
   BN_free(output_mask_bn);

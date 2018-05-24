@@ -37,4 +37,5 @@ scd/netlists/*.v
 scd/netlists/*.scd
 scd/netlists/*.sh
 OLabels.txt
+OMasks.txt
 Tables.txt
