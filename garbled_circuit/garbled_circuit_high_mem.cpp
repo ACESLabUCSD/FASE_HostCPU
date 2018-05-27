@@ -174,6 +174,7 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
 		string table_file(acc_file_address+"/Tables.txt");
 		ifstream ftin;
 		string rows = "";
+		uint32_t gid;
 		ftin.open(table_file.c_str(), std::ios::in);
 		if (!ftin.good()) {
 			LOG(ERROR) << "file not found:" << table_file << endl;
@@ -187,14 +188,20 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
 		
 		for (uint64_t cid = 0; cid < (*clock_cycles); cid++) {
 			for (uint64_t i = 0; i < garbled_tables_size; i++) {
+				ftin >> gid;
+				garbled_tables[i].gid = gid;
 				ftin >> rows;
-				Str2Block(rows, &garbled_tables[i].row[0]);
-				LOG(INFO) << "garbled_tables[" << i <<"].row[0]:\t";
+				Str2Block(rows, &(garbled_tables[i].row[0]));
+#ifdef HW_ACLRTR_PRINT	
+				LOG(INFO) << cid << ":\tgarbled_tables[" << i <<"].row[0]:\t";
 				printBlock(garbled_tables[i].row[0]);
+#endif
 				ftin >> rows;
-				Str2Block(rows, &garbled_tables[i].row[1]);
-				LOG(INFO) << "garbled_tables[" << i <<"].row[1]:\t";
-				printBlock(garbled_tables[i].row[1]);
+				Str2Block(rows, &(garbled_tables[i].row[1]));
+#ifdef HW_ACLRTR_PRINT	
+				LOG(INFO) << cid << ":\tgarbled_tables[" << i <<"].row[1]:\t";
+				printBlock(garbled_tables[i].row[1]); 
+#endif
 			}
 			CHECK(SendData(connfd, &garbled_tables_size, sizeof(uint64_t)));
 			CHECK(
@@ -245,7 +252,7 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
 #ifdef HW_ACLRTR
 	string olabel_file(acc_file_address+"/OLabels.txt");
 	ofstream flout;
-	flout.open(olabel_file.c_str(), std::ofstream::out);
+	flout.open(olabel_file.c_str(), std::ofstream::out);	
 	flout << garbled_circuit.output_size << endl;
 
 	string table_file(acc_file_address+"/Tables.txt");
@@ -452,7 +459,7 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
     }
     garble_time += RDTSC - garble_start_time;
 	
-#ifdef HW_ACLRTR
+#ifdef HW_ACLRTR	
 	for (uint64_t i = 0; i < garbled_circuit.output_size; i++){
 		printBlock(output_labels[(cid * garbled_circuit.output_size + i) * 2 + 0], flout);
 		printBlock(output_labels[(cid * garbled_circuit.output_size + i) * 2 + 1], flout);
@@ -469,10 +476,11 @@ int GarbleHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
     comm_time += RDTSC - comm_start_time;
 	
 #ifdef HW_ACLRTR
-	if (cid == 0) {
+	if (cid == 0){
 		ftout << garbled_table_ind << endl;
 	}
 	for (uint64_t i = 0; i < garbled_table_ind; i++){
+		ftout << garbled_tables[i].gid << endl;
 		printBlock(garbled_tables[i].row[0], ftout);
 		printBlock(garbled_tables[i].row[1], ftout);
 	}
@@ -584,6 +592,16 @@ int EvaluateHighMem(const GarbledCircuit& garbled_circuit, BIGNUM* p_init,
           RecvData(connfd, garbled_tables,
                    garbled_table_ind_rcv * sizeof(GarbledTable)));
     }
+
+#ifdef HW_ACLRTR_PRINT	
+	for (uint64_t i = 0; i < garbled_table_ind_rcv; i++) {
+				LOG(INFO) << cid << ":\tgarbled_tables[" << i <<"].row[0]:\t";
+				printBlock(garbled_tables[i].row[0]);
+				LOG(INFO) << cid << ":\tgarbled_tables[" << i <<"].row[1]:\t";
+				printBlock(garbled_tables[i].row[1]); 
+			}
+#endif
+	
     comm_time += RDTSC - comm_start_time;
 
     uint64_t eval_start_time = RDTSC;
@@ -1062,8 +1080,10 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit, block** init_labels,
 #ifdef HW_ACLRTR
 		flin >> label;
 		Str2Block(label, &(*init_labels)[i * 2 + 0]);
+#ifdef HW_ACLRTR_PRINT	
 		LOG(INFO) << "init_labels[" << i * 2 + 0 << "]:\t";
 		printBlock((*init_labels)[i * 2 + 0]);
+#endif
 #else
       (*init_labels)[i * 2 + 0] = RandomBlock();
 #endif
@@ -1084,8 +1104,10 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit, block** init_labels,
 #ifdef HW_ACLRTR
 		flin >> label;
 		Str2Block(label, &(*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0]);
+#ifdef HW_ACLRTR_PRINT	
 		LOG(INFO) << "input_labels[" << (cid * garbled_circuit.get_input_size() + i) * 2 + 0 << "]:\t";
 		printBlock((*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0]);
+#endif
 #else
         (*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0] =
             RandomBlock();
@@ -1178,12 +1200,17 @@ int GarbleTransferOutput(const GarbledCircuit& garbled_circuit,
 	string omask_file(acc_file_address+"/OMasks.txt");
 	ofstream fmout;
 	fmout.open(omask_file.c_str(), std::ofstream::out);
+	fmout << garbled_circuit.output_size << endl;
+	for (uint64_t cid = 0; cid < clock_cycles; cid++) {
+		for (uint64_t i = 0; i < garbled_circuit.output_size; i++) {
+			short garble_output_type = get_LSB(
+				output_labels[(cid * garbled_circuit.output_size + i) * 2 + 0]);
+			fmout << garble_output_type << endl; 
+		}		
+	}
 #endif
 
   for (uint64_t cid = 0; cid < clock_cycles; cid++) {
-#ifdef HW_ACLRTR
-	fmout << garbled_circuit.output_size << endl;  
-#endif
     for (uint64_t i = 0; i < garbled_circuit.output_size; i++) {
       if (output_vals[cid * garbled_circuit.output_size + i] == 0) {
         BN_clear_bit(output_bn, cid * garbled_circuit.output_size + i);
@@ -1195,9 +1222,6 @@ int GarbleTransferOutput(const GarbledCircuit& garbled_circuit,
       } else {
         short garble_output_type = get_LSB(
             output_labels[(cid * garbled_circuit.output_size + i) * 2 + 0]);
-#ifdef HW_ACLRTR
-		    fmout << garble_output_type << endl;  
-#endif
         short eval_output_type;
         if (i >= (uint64_t) BN_num_bits(output_mask_bn)
             || BN_is_bit_set(output_mask_bn, i) == 0) {
