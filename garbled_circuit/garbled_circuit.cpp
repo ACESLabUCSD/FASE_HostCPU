@@ -33,6 +33,7 @@
  along with TinyGarble.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <boost/format.hpp>
 #include "garbled_circuit/garbled_circuit.h"
 
 #include "scd/scd.h"
@@ -276,6 +277,10 @@ int Garble(const GarbledCircuit& garbled_circuit, block* const_labels,
 
       block tweak0 = MakeBlock(cid, 2 * i + 0);
       block tweak1 = MakeBlock(cid, 2 * i + 1);
+	  
+	  /*LOG(INFO) << boost::format{"%X\t%X\t%X"}%cid%(2*i)%(2*i+1) << endl;
+	  printBlock(tweak0);
+	  printBlock(tweak1);*/
 
       block keys[4];
       keys[0] = XorBlock(A0, tweak0);
@@ -1151,13 +1156,13 @@ int GarbleStr(const string& scd_file_address, const string& init_str,
       }
       ot_time += RDTSC - ot_start_time;
 
-      uint64_t garble_start_time = RDTSC;
+      //uint64_t garble_start_time = RDTSC;
       {
-        GarbleLowMem(garbled_circuit, const_labels, init_labels, input_labels,
+        garble_time += GarbleLowMem(garbled_circuit, const_labels, init_labels, input_labels,
                      garbled_tables, R, AES_Key, cid, connfd, wires,
                      output_labels);
       }
-      garble_time += RDTSC - garble_start_time;
+      //garble_time += RDTSC - garble_start_time;
 
       uint64_t comm_start_time = RDTSC;
       {
@@ -1323,13 +1328,13 @@ int EvaluateStr(const string& scd_file_address, const string& init_str,
       }
       comm_time += RDTSC - comm_start_time;
 
-      uint64_t eval_start_time = RDTSC;
-      {
+      //uint64_t eval_start_time = RDTSC;
+      //{
         eval_time += EvaluateLowMem(garbled_circuit, const_labels, init_labels,
                                     input_labels, garbled_tables, AES_Key, cid,
                                     connfd, wires, output_labels);
-      }
-      eval_time += RDTSC - eval_start_time;
+      //}
+      //eval_time += RDTSC - eval_start_time;
 
       CHECK(
           EvaluateTransferOutputLowMem(garbled_circuit, output_labels, cid,
