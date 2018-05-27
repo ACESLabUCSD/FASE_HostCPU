@@ -41,6 +41,9 @@
 #include <openssl/bn.h>
 #include "crypto/block.h"
 
+#define HW_ACLRTR
+#define HW_ACLRTR_PRINT	
+
 using std::string;
 
 /**
@@ -172,7 +175,11 @@ int OutputBN2Str(const GarbledCircuit& garbled_circuit, BIGNUM* outputs,
 int GarbleStr(const string& scd_file_address, const string& init_str,
               const string& input_str, uint64_t clock_cycles,
               const string& output_mask, int output_mode, bool disable_OT,
-              bool low_mem_foot, string* output_str, int connfd);
+              bool low_mem_foot, string* output_str, int connfd
+#ifdef HW_ACLRTR					
+			  , bool aclrtr, string acc_file_address
+#endif					
+					);
 int EvaluateStr(const string& scd_file_address, const string& init_str,
                 const string& input_str, uint64_t clock_cycles,
                 const string& output_mask, int output_mode, bool disable_OT,

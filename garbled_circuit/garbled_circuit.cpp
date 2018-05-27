@@ -47,6 +47,11 @@
 #include "util/common.h"
 #include "util/util.h"
 
+#ifdef HW_ACLRTR
+using std::ifstream;
+using std::ofstream;
+#endif
+
 uint64_t NumOfNonXor(const GarbledCircuit& garbled_circui) {
   uint64_t num_of_non_xor = 0;
   for (uint64_t i = 0; i < garbled_circui.gate_size; i++) {
@@ -61,10 +66,52 @@ uint64_t NumOfNonXor(const GarbledCircuit& garbled_circui) {
 
 int Garble(const GarbledCircuit& garbled_circuit, block* const_labels,
            block* init_labels, block* input_labels, block global_key, block R,
-           uint64_t clock_cycles, int connfd, block* output_labels) {
+           uint64_t clock_cycles, int connfd, block* output_labels
+#ifdef HW_ACLRTR					
+			  , bool aclrtr, string acc_file_address
+#endif					
+					) {
 
   DUMP("r_key") << R << endl;
   DUMP("r_key") << global_key << endl;
+  
+#ifdef HW_ACLRTR
+	if(aclrtr){
+		string table_file(acc_file_address+"/Tables.txt");
+		ifstream ftin;
+		ftin.open(table_file.c_str(), std::ios::in);
+		if (!ftin.good()) {
+			LOG(ERROR) << "file not found:" << table_file << endl;
+			return -1;
+		}
+		
+		uint64_t num_of_non_xor;
+		ftin >> num_of_non_xor;
+		block* garbled_tables = nullptr;
+		CHECK_ALLOC(garbled_tables = new block[num_of_non_xor * 2]);
+		
+		string rows = "";
+		for (uint64_t cid = 0; cid < clock_cycles; cid++) {
+			for (uint64_t i = 0; i < num_of_non_xor; i++) {
+				ftin >> rows;
+				Str2Block(rows, &(garbled_tables[2*i]));
+#ifdef HW_ACLRTR_PRINT	
+				LOG(INFO) << cid << ":\tgarbled_tables[" << 2*i <<"]:\t";
+				printBlock(garbled_tables[2*i]);
+#endif
+				ftin >> rows;
+				Str2Block(rows, &(garbled_tables[2*i+1]));
+#ifdef HW_ACLRTR_PRINT	
+				LOG(INFO) << cid << ":\tgarbled_tables[" << 2*i+1 <<"]:\t";
+				printBlock(garbled_tables[2*i+1]); 
+#endif
+			}
+			CHECK(SendData(connfd, garbled_tables, 2 * num_of_non_xor * sizeof(block)));		
+		}
+		
+		return SUCCESS;
+	}
+#endif
 
   BlockPair *wires = nullptr;
   CHECK_ALLOC(wires = new BlockPair[garbled_circuit.get_wire_size()]);
@@ -78,6 +125,18 @@ int Garble(const GarbledCircuit& garbled_circuit, block* const_labels,
 
   AES_KEY AES_Key;
   AESSetEncryptKey((unsigned char *) &(global_key), 128, &AES_Key);
+  
+#ifdef HW_ACLRTR
+	string olabel_file(acc_file_address+"/OLabels.txt");
+	ofstream flout;
+	flout.open(olabel_file.c_str(), std::ofstream::out);	
+	flout << garbled_circuit.output_size << endl;
+
+	string table_file(acc_file_address+"/Tables.txt");
+	ofstream ftout;
+	ftout.open(table_file.c_str(), std::ofstream::out);
+	ftout << num_of_non_xor << endl;
+#endif
 
   for (uint64_t cid = 0; cid < clock_cycles; cid++) {
     uint64_t garbled_table_ind = 0;
@@ -281,12 +340,29 @@ int Garble(const GarbledCircuit& garbled_circuit, block* const_labels,
       DUMP("output") << wires[garbled_circuit.outputs[i]].label0 << endl;
     }
     garble_time += RDTSC - garble_start_time;
+	
+#ifdef HW_ACLRTR	
+	for (uint64_t i = 0; i < garbled_circuit.output_size; i++){
+		printBlock(output_labels[(cid * garbled_circuit.output_size + i) * 2 + 0], flout);
+		printBlock(output_labels[(cid * garbled_circuit.output_size + i) * 2 + 1], flout);
+	}
+#endif
 
     uint64_t comm_start_time = RDTSC;
     CHECK(SendData(connfd, garbled_tables, 2 * num_of_non_xor * sizeof(block)));
     comm_time += RDTSC - comm_start_time;
-
+	
+#ifdef HW_ACLRTR
+	for (uint64_t i = 0; i < num_of_non_xor; i++){
+		printBlock(garbled_tables[2*i], ftout);
+		printBlock(garbled_tables[2*i+1], ftout);
+	}
+#endif
   }
+#ifdef HW_ACLRTR
+	flout.close();
+	ftout.close();
+#endif
 
   LOG(INFO) << "Alice communication time (cc) = " << comm_time
             << "\t(cc/gate) = "
@@ -725,12 +801,36 @@ int ParseInitInputStr(const string& init_str, const string&input_str,
 int GarbleMakeLabels(const GarbledCircuit& garbled_circuit,
                      block** const_labels, block** init_labels,
                      block** input_labels, block** output_labels, block R,
-                     uint64_t clock_cycles) {
+                     uint64_t clock_cycles
+#ifdef HW_ACLRTR					
+			  , bool aclrtr, string acc_file_address
+#endif					
+					) {
+#ifdef HW_ACLRTR
+	string label_file;
+	ifstream flin;
+	string label = "";
+	label_file = acc_file_address + "/Labels.txt";
+	flin.open(label_file.c_str(), std::ios::in);
+	if (!flin.good()) {
+		LOG(ERROR) << "file not found:" << label_file << endl;
+		return -1;
+	}
+#endif
 
   (*const_labels) = nullptr;
   CHECK_ALLOC((*const_labels) = new block[2 * 2]);
   for (uint i = 0; i < 2; i++) {
+#ifdef HW_ACLRTR
+		flin >> label;
+		Str2Block(label, &(*const_labels)[i * 2 + 0]);
+#ifdef HW_ACLRTR_PRINT	
+		LOG(INFO) << "const_labels[" << i * 2 + 0 << "]:\t";
+		printBlock((*const_labels)[i * 2 + 0]);
+#endif
+#else
     (*const_labels)[i * 2 + 0] = RandomBlock();
+#endif
     (*const_labels)[i * 2 + 1] = XorBlock(R, (*const_labels)[i * 2 + 0]);
   }
 
@@ -739,7 +839,16 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit,
   if (garbled_circuit.get_init_size() > 0) {
     CHECK_ALLOC((*init_labels) = new block[garbled_circuit.get_init_size() * 2]);
     for (uint i = 0; i < garbled_circuit.get_init_size(); i++) {
+#ifdef HW_ACLRTR
+		flin >> label;
+		Str2Block(label, &(*init_labels)[i * 2 + 0]);
+#ifdef HW_ACLRTR_PRINT	
+		LOG(INFO) << "init_labels[" << i * 2 + 0 << "]:\t";
+		printBlock((*init_labels)[i * 2 + 0]);
+#endif
+#else
       (*init_labels)[i * 2 + 0] = RandomBlock();
+#endif
       (*init_labels)[i * 2 + 1] = XorBlock(R, (*init_labels)[i * 2 + 0]);
     }
   }
@@ -753,8 +862,17 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit,
             * garbled_circuit.get_input_size() * 2]);
     for (uint cid = 0; cid < clock_cycles; cid++) {
       for (uint i = 0; i < garbled_circuit.get_input_size(); i++) {
+#ifdef HW_ACLRTR
+		flin >> label;
+		Str2Block(label, &(*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0]);
+#ifdef HW_ACLRTR_PRINT	
+		LOG(INFO) << "input_labels[" << (cid * garbled_circuit.get_input_size() + i) * 2 + 0 << "]:\t";
+		printBlock((*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0]);
+#endif
+#else
         (*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0] =
             RandomBlock();
+#endif
         (*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 1] =
             XorBlock(
                 R,
@@ -763,6 +881,9 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit,
       }
     }
   }
+#ifdef HW_ACLRTR
+	flin.close();
+#endif
   if (garbled_circuit.output_size > 0) {
     CHECK_ALLOC(
         (*output_labels) = new block[clock_cycles * garbled_circuit.output_size
@@ -802,7 +923,46 @@ int EvaluateMakeLabels(const GarbledCircuit& garbled_circuit,
 int GarbleTransferOutput(const GarbledCircuit& garbled_circuit,
                          block* output_labels, uint64_t clock_cycles,
                          const string& output_mask, int output_mode,
-                         string* output_str, int connfd) {
+                         string* output_str, int connfd
+#ifdef HW_ACLRTR					
+			  , bool aclrtr, string acc_file_address
+#endif					
+					) {
+#ifdef HW_ACLRTR
+	string omask_file(acc_file_address+"/OMasks.txt");
+	if(aclrtr){
+		ifstream fmin;		
+		fmin.open(omask_file.c_str(), std::ios::in);
+		if (!fmin.good()) {
+			LOG(ERROR) << "file not found:" << omask_file << endl;
+			return -1;
+		}		
+		uint64_t output_size;
+		fmin >> output_size;
+		short garble_output_type;
+		
+		for (uint64_t cid = 0; cid < clock_cycles; cid++) {
+			for (uint64_t i = 0; i < output_size; i++) {
+				fmin >> garble_output_type;
+				CHECK(SendData(connfd, &garble_output_type, sizeof(short)));
+			}			
+		}
+		fmin.close();
+		return SUCCESS;
+	}
+	
+	ofstream fmout;
+	fmout.open(omask_file.c_str(), std::ofstream::out);
+	fmout << garbled_circuit.output_size << endl;
+	for (uint64_t cid = 0; cid < clock_cycles; cid++) {
+		for (uint64_t i = 0; i < garbled_circuit.output_size; i++) {
+			short garble_output_type = get_LSB(
+				output_labels[(cid * garbled_circuit.output_size + i) * 2 + 0]);
+			fmout << garble_output_type << endl; 
+		}		
+	}
+	fmout.close();
+#endif
   BIGNUM* output_mask_bn = BN_new();
   BN_hex2bn(&output_mask_bn, output_mask.c_str());
 
@@ -827,7 +987,7 @@ int GarbleTransferOutput(const GarbledCircuit& garbled_circuit,
         }
       }
     }
-  }
+  } 
   OutputBN2Str(garbled_circuit, output_bn, clock_cycles, output_mode,
                output_str);
 
@@ -890,7 +1050,11 @@ void RemoveGarbledCircuit(GarbledCircuit *garbled_circuit) {
 int GarbleStr(const string& scd_file_address, const string& init_str,
               const string& input_str, uint64_t clock_cycles,
               const string& output_mask, int output_mode, bool disable_OT,
-              bool low_mem_foot, string* output_str, int connfd) {
+              bool low_mem_foot, string* output_str, int connfd
+#ifdef HW_ACLRTR					
+			  , bool aclrtr, string acc_file_address
+#endif					
+					) {
   if (clock_cycles == 0) {
     return FAILURE;
   }
@@ -900,9 +1064,6 @@ int GarbleStr(const string& scd_file_address, const string& init_str,
     LOG(ERROR) << "Error while reading scd file: " << scd_file_address << endl;
     return FAILURE;
   }
-
-  block R = RandomBlock();  // secret label
-  *((short *) (&R)) |= 1;
 
   // parse init and input
   BIGNUM* g_init = BN_new();
@@ -917,8 +1078,34 @@ int GarbleStr(const string& scd_file_address, const string& init_str,
   block* input_labels = nullptr;
   block* output_labels = nullptr;
 
-  // global key
-  block global_key = RandomBlock();
+ 	block R;
+	block global_key;
+#ifdef HW_ACLRTR 
+	string key_file(acc_file_address+"/Keys.txt");
+	ifstream fkin(key_file.c_str(), std::ios::in);
+	if (!fkin.good()) {
+		LOG(ERROR) << "file not found:" << key_file << endl;
+		return -1;
+	}
+	string keys = "";
+	fkin >> keys;
+	Str2Block(keys, &R);
+#ifdef HW_ACLRTR_PRINT
+	LOG(INFO) << "R:\t";
+	printBlock(R);
+#endif
+	fkin >> keys;
+	Str2Block(keys, &global_key);
+#ifdef HW_ACLRTR_PRINT
+	LOG(INFO) << "global_key:\t";
+	printBlock(global_key);
+#endif
+	fkin.close();
+#else
+  R = RandomBlock();  // secret label
+  *((short *) (&R)) |= 1;
+  global_key = RandomBlock();  // global key
+#endif
   CHECK(SendData(connfd, &global_key, sizeof(block)));  // send global key
 
   uint64_t ot_time = 0;
@@ -1012,7 +1199,11 @@ int GarbleStr(const string& scd_file_address, const string& init_str,
     // allocate init and input values and translate form string
     CHECK(
         GarbleMakeLabels(garbled_circuit, &const_labels, &init_labels,
-                         &input_labels, &output_labels, R, clock_cycles));
+                         &input_labels, &output_labels, R, clock_cycles
+#ifdef HW_ACLRTR					   
+					   , aclrtr, acc_file_address
+#endif						   
+					   ));
 
     uint64_t ot_start_time = RDTSC;
     {
@@ -1033,10 +1224,18 @@ int GarbleStr(const string& scd_file_address, const string& init_str,
         << endl;
 
     Garble(garbled_circuit, const_labels, init_labels, input_labels, global_key,
-           R, clock_cycles, connfd, output_labels);
+           R, clock_cycles, connfd, output_labels
+#ifdef HW_ACLRTR					   
+					   , aclrtr, acc_file_address
+#endif						   
+					   );
     CHECK(
         GarbleTransferOutput(garbled_circuit, output_labels, clock_cycles,
-                             output_mask, output_mode, output_str, connfd));
+                             output_mask, output_mode, output_str, connfd
+#ifdef HW_ACLRTR					   
+					   , aclrtr, acc_file_address
+#endif						   
+					   ));
   }
   BN_free(g_init);
   BN_free(g_input);

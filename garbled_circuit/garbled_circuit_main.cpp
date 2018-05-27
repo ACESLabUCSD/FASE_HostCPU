@@ -149,6 +149,11 @@ int main(int argc, char* argv[]) {
   int output_mode;
   bool disable_OT = false;
   bool low_mem_foot = false;
+#ifdef HW_ACLRTR	
+  bool aclrtr = false;
+  string acc_file_address = "";
+#endif
+
   boost::format fmter(
       "Evaluate Netlist, TinyGarble version %1%.%2%.%3%.\nAllowed options");
   fmter % TinyGarble_VERSION_MAJOR % TinyGarble_VERSION_MINOR
@@ -169,7 +174,7 @@ int main(int argc, char* argv[]) {
    "Hexadecimal init for initializing DFFs.")  //
   ("input", po::value<string>(&input_str)->default_value("0"),
    "Hexadecimal input.")  //
-  ("clock_cycles", po::value<uint64_t>(&clock_cycles)->default_value(1),
+  ("clock_cycles,c", po::value<uint64_t>(&clock_cycles)->default_value(1),
    "Number of clock cycles to evaluate the circuit.")  //
   ("dump_directory", po::value<string>(&dump_prefix)->default_value(""),
    "Directory for dumping memory hex files.")  //
@@ -180,7 +185,12 @@ int main(int argc, char* argv[]) {
    "which degrades the performance.")  //
   ("output_mask", po::value<string>(&output_mask)->default_value("0"),
    "Hexadecimal mask for output. 0 indicates that output belongs to Bob, "
-   "and 1 belongs to Alice.")  //
+   "and 1 belongs to Alice.")  //  
+#ifdef HW_ACLRTR
+	("acc,w",
+   po::value<string>(&acc_file_address),
+   "There is a HW accelerator generating the garbled tables.")  //
+#endif
   ("output_mode", po::value<int>(&output_mode)->default_value(0),
    "0: normal, 1:separated by clock 2:last clock.");
 
@@ -205,7 +215,16 @@ int main(int argc, char* argv[]) {
     LOG(INFO) << "OT is disabled. WARNING:OT is crucial for GC security."
               << endl;
   }
-
+#ifdef HW_ACLRTR  
+  if(acc_file_address.length() == 0){
+    acc_file_address = string(TINYGARBLE_SOURCE_DIR)+"/hw_aclrtr";
+  }
+  if (vm.count("acc")) {
+    aclrtr = true;
+    LOG(INFO) << "Looking for HW accelerator generated garbled tables at " << acc_file_address
+              << endl;
+  }
+#endif
   if (vm.count("low_mem_foot")) {
     low_mem_foot = true;
     LOG(INFO) << "Low memory footprint mode is on." << endl;
@@ -236,7 +255,11 @@ int main(int argc, char* argv[]) {
     CHECK(
         GarbleStr(scd_file_address, init_str, input_str, clock_cycles,
                   output_mask, output_mode, disable_OT, low_mem_foot,
-                  &output_str, connfd));
+                  &output_str, connfd
+#ifdef HW_ACLRTR					   
+				  , aclrtr, acc_file_address
+#endif						   
+					   ));
     delta_time = RDTSC - delta_time;
 
     LOG(INFO) << "Alice's output = " << output_str << endl;
