@@ -43,13 +43,21 @@ struct GCTestStruct {
   bool disable_OT;
   bool low_mem_foot;
   uint64_t clock_cycles;
+#ifdef HW_ACLRTR					
+  bool aclrtr;
+  string acc_file_address;
+#endif					
 };
 
 GCTestStruct MakeGCTestStruct(const string& scd_file_address,
                               const string& init, const string& input,
                               const string& output, const string& output_mask,
                               int output_mode, bool disable_OT,
-                              bool low_mem_foot, uint64_t clock_cycles) {
+                              bool low_mem_foot, uint64_t clock_cycles
+#ifdef HW_ACLRTR					
+                            , bool aclrtr, string acc_file_address
+#endif					
+					) {
   GCTestStruct ret;
 
   ret.scd_file_address = scd_file_address;
@@ -61,6 +69,10 @@ GCTestStruct MakeGCTestStruct(const string& scd_file_address,
   ret.disable_OT = disable_OT;
   ret.low_mem_foot = low_mem_foot;
   ret.clock_cycles = clock_cycles;
+#ifdef HW_ACLRTR					
+  ret.aclrtr = aclrtr;
+  ret.acc_file_address = acc_file_address;
+#endif
   return ret;
 }
 
@@ -77,7 +89,7 @@ int Alice(const void* data, int connfd) {
                       gc_data->output_mode, gc_data->disable_OT,
                       gc_data->low_mem_foot, &output_str, connfd
 #ifdef HW_ACLRTR					
-			  , false, string(TINYGARBLE_SOURCE_DIR)+"/hw_aclrtr"
+					, gc_data->aclrtr, gc_data->acc_file_address
 #endif					
 					);
 
@@ -134,6 +146,10 @@ MU_TEST(Mux8Bit) {
   int output_mode = 0;
   bool disable_OT = false;
   bool low_mem_foot = false;
+#ifdef HW_ACLRTR					
+  bool aclrtr = false;
+  string acc_file_address = string(TINYGARBLE_SOURCE_DIR) + "/hw_aclrtr";
+#endif
   for (int i = 0; i < TEST_REPEAT; i++) {
     uint8_t x[2];
     x[0] = (uint8_t) (rand() % 256);
@@ -155,13 +171,25 @@ MU_TEST(Mux8Bit) {
     GCTestStruct garbler_data = MakeGCTestStruct(scd_file_address, g_init_str,
                                                  g_input_str, "0", "0",
                                                  output_mode, disable_OT,
-                                                 low_mem_foot, clock_cycles);
+                                                 low_mem_foot, clock_cycles
+#ifdef HW_ACLRTR					
+												, aclrtr, acc_file_address
+#endif					
+					);
     GCTestStruct eval_data = MakeGCTestStruct(scd_file_address, e_init_str,
                                               e_input_str, output_str, "0",
                                               output_mode, disable_OT,
-                                              low_mem_foot, clock_cycles);
-
+                                              low_mem_foot, clock_cycles
+#ifdef HW_ACLRTR					
+											, aclrtr, acc_file_address
+#endif					
+					);
+					
     ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
+    mu_assert(ret == SUCCESS, "TcpipTestRun");
+	
+	garbler_data.aclrtr = true;
+	ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
   }
 }
@@ -178,6 +206,10 @@ MU_TEST(Sum1Bit) {
   int output_mode = 0;
   bool disable_OT = false;
   bool low_mem_foot = false;
+#ifdef HW_ACLRTR					
+  bool aclrtr = false;
+  string acc_file_address = string(TINYGARBLE_SOURCE_DIR) + "/hw_aclrtr";
+#endif
   for (int i = 0; i < TEST_REPEAT; i++) {
     uint8_t x[2];
     x[0] = (uint8_t) (rand() % 127);
@@ -198,13 +230,25 @@ MU_TEST(Sum1Bit) {
     GCTestStruct garbler_data = MakeGCTestStruct(scd_file_address, g_init_str,
                                                  g_input_str, "0", "0",
                                                  output_mode, disable_OT,
-                                                 low_mem_foot, clock_cycles);
+                                                 low_mem_foot, clock_cycles
+#ifdef HW_ACLRTR					
+												, aclrtr, acc_file_address
+#endif					
+					);
     GCTestStruct eval_data = MakeGCTestStruct(scd_file_address, e_init_str,
                                               e_input_str, output_str, "0",
                                               output_mode, disable_OT,
-                                              low_mem_foot, clock_cycles);
+                                              low_mem_foot, clock_cycles
+#ifdef HW_ACLRTR					
+											, aclrtr, acc_file_address
+#endif					
+					);
 
     ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
+    mu_assert(ret == SUCCESS, "TcpipTestRun");
+	
+	garbler_data.aclrtr = true;
+	ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
 
   }
@@ -222,6 +266,10 @@ MU_TEST(Sum8Bit) {
   int output_mode = 0;
   bool disable_OT = false;
   bool low_mem_foot = false;
+#ifdef HW_ACLRTR					
+  bool aclrtr = false;
+  string acc_file_address = string(TINYGARBLE_SOURCE_DIR) + "/hw_aclrtr";
+#endif
   for (int i = 0; i < TEST_REPEAT; i++) {
     uint8_t x[2];
     x[0] = (uint8_t) (rand() % 127);
@@ -241,13 +289,25 @@ MU_TEST(Sum8Bit) {
     GCTestStruct garbler_data = MakeGCTestStruct(scd_file_address, g_init_str,
                                                  g_input_str, "0", "0",
                                                  output_mode, disable_OT,
-                                                 low_mem_foot, clock_cycles);
+                                                 low_mem_foot, clock_cycles
+#ifdef HW_ACLRTR					
+												, aclrtr, acc_file_address
+#endif					
+					);
     GCTestStruct eval_data = MakeGCTestStruct(scd_file_address, e_init_str,
                                               e_input_str, output_str, "0",
                                               output_mode, disable_OT,
-                                              low_mem_foot, clock_cycles);
+                                              low_mem_foot, clock_cycles
+#ifdef HW_ACLRTR					
+											, aclrtr, acc_file_address
+#endif					
+					);
 
     ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
+    mu_assert(ret == SUCCESS, "TcpipTestRun");
+	
+	garbler_data.aclrtr = true;
+	ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
   }
 }
@@ -264,6 +324,10 @@ MU_TEST(Hamming32Bit1cc) {
   uint64_t clock_cycles = 1;
   bool disable_OT = false;
   bool low_mem_foot = false;
+#ifdef HW_ACLRTR					
+  bool aclrtr = false;
+  string acc_file_address = string(TINYGARBLE_SOURCE_DIR) + "/hw_aclrtr";
+#endif
   for (int i = 0; i < TEST_REPEAT; i++) {
     uint32_t x[2];
     x[0] = (uint32_t) rand();
@@ -284,13 +348,25 @@ MU_TEST(Hamming32Bit1cc) {
     GCTestStruct garbler_data = MakeGCTestStruct(scd_file_address, g_init_str,
                                                  g_input_str, "0", "0",
                                                  output_mode, disable_OT,
-                                                 low_mem_foot, clock_cycles);
+                                                 low_mem_foot, clock_cycles
+#ifdef HW_ACLRTR					
+												, aclrtr, acc_file_address
+#endif					
+					);
     GCTestStruct eval_data = MakeGCTestStruct(scd_file_address, e_init_str,
                                               e_input_str, output_str, "0",
                                               output_mode, disable_OT,
-                                              low_mem_foot, clock_cycles);
+                                              low_mem_foot, clock_cycles
+#ifdef HW_ACLRTR					
+											, aclrtr, acc_file_address
+#endif					
+					);
 
     ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
+    mu_assert(ret == SUCCESS, "TcpipTestRun");
+	
+	garbler_data.aclrtr = true;
+	ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
   }
 }
@@ -307,6 +383,10 @@ MU_TEST(Hamming32Bit8cc) {
   uint64_t clock_cycles = 8;
   bool disable_OT = false;
   bool low_mem_foot = false;
+#ifdef HW_ACLRTR					
+  bool aclrtr = false;
+  string acc_file_address = string(TINYGARBLE_SOURCE_DIR) + "/hw_aclrtr";
+#endif
   for (int i = 0; i < TEST_REPEAT; i++) {
     uint32_t x[2];
     x[0] = (uint32_t) rand();
@@ -327,13 +407,25 @@ MU_TEST(Hamming32Bit8cc) {
     GCTestStruct garbler_data = MakeGCTestStruct(scd_file_address, g_init_str,
                                                  g_input_str, "0", "0",
                                                  output_mode, disable_OT,
-                                                 low_mem_foot, clock_cycles);
+                                                 low_mem_foot, clock_cycles
+#ifdef HW_ACLRTR					
+												, aclrtr, acc_file_address
+#endif					
+					);
     GCTestStruct eval_data = MakeGCTestStruct(scd_file_address, e_init_str,
                                               e_input_str, output_str, "0",
                                               output_mode, disable_OT,
-                                              low_mem_foot, clock_cycles);
+                                              low_mem_foot, clock_cycles
+#ifdef HW_ACLRTR					
+											, aclrtr, acc_file_address
+#endif					
+					);
 
     ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
+    mu_assert(ret == SUCCESS, "TcpipTestRun");
+	
+	garbler_data.aclrtr = true;
+	ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
 
   }
@@ -351,6 +443,10 @@ MU_TEST(Hamming32Bit8ccDisabledOT) {
   uint64_t clock_cycles = 8;
   bool disable_OT = true;
   bool low_mem_foot = false;
+#ifdef HW_ACLRTR					
+  bool aclrtr = false;
+  string acc_file_address = string(TINYGARBLE_SOURCE_DIR) + "/hw_aclrtr";
+#endif
   for (int i = 0; i < TEST_REPEAT; i++) {
     uint32_t x[2];
     x[0] = (uint32_t) rand();
@@ -371,13 +467,25 @@ MU_TEST(Hamming32Bit8ccDisabledOT) {
     GCTestStruct garbler_data = MakeGCTestStruct(scd_file_address, g_init_str,
                                                  g_input_str, "0", "0",
                                                  output_mode, disable_OT,
-                                                 low_mem_foot, clock_cycles);
+                                                 low_mem_foot, clock_cycles
+#ifdef HW_ACLRTR					
+												, aclrtr, acc_file_address
+#endif					
+					);
     GCTestStruct eval_data = MakeGCTestStruct(scd_file_address, e_init_str,
                                               e_input_str, output_str, "0",
                                               output_mode, disable_OT,
-                                              low_mem_foot, clock_cycles);
+                                              low_mem_foot, clock_cycles
+#ifdef HW_ACLRTR					
+											, aclrtr, acc_file_address
+#endif					
+					);
 
     ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
+    mu_assert(ret == SUCCESS, "TcpipTestRun");
+	
+	garbler_data.aclrtr = true;
+	ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
 
   }
@@ -395,6 +503,10 @@ MU_TEST(Hamming32Bit8ccWithMask) {
   string output_mask = "FFFFFFFFFFFF";  //48-bit
   bool disable_OT = false;
   bool low_mem_foot = false;
+#ifdef HW_ACLRTR					
+  bool aclrtr = false;
+  string acc_file_address = string(TINYGARBLE_SOURCE_DIR) + "/hw_aclrtr";
+#endif
   for (int i = 0; i < TEST_REPEAT; i++) {
     uint32_t x[2];
     x[0] = (uint32_t) rand();
@@ -419,14 +531,26 @@ MU_TEST(Hamming32Bit8ccWithMask) {
                                                  g_input_str, garble_output_str,
                                                  output_mask, output_mode,
                                                  disable_OT, low_mem_foot,
-                                                 clock_cycles);
+                                                 clock_cycles
+#ifdef HW_ACLRTR					
+											, aclrtr, acc_file_address
+#endif					
+					);
     GCTestStruct eval_data = MakeGCTestStruct(scd_file_address, e_init_str,
                                               e_input_str, eval_output_str,
                                               output_mask, output_mode,
                                               disable_OT, low_mem_foot,
-                                              clock_cycles);
+                                              clock_cycles
+#ifdef HW_ACLRTR					
+											, aclrtr, acc_file_address
+#endif					
+					);
 
     ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
+    mu_assert(ret == SUCCESS, "TcpipTestRun");
+	
+	garbler_data.aclrtr = true;
+	ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
 
   }
@@ -445,6 +569,10 @@ MU_TEST(Hamming32Bit8ccDisabledOTLowMem) {
   uint64_t clock_cycles = 8;
   bool disable_OT = true;
   bool low_mem_foot = true;
+#ifdef HW_ACLRTR					
+  bool aclrtr = false;
+  string acc_file_address = string(TINYGARBLE_SOURCE_DIR) + "/hw_aclrtr";
+#endif
   for (int i = 0; i < TEST_REPEAT; i++) {
     uint32_t x[2];
     x[0] = (uint32_t) rand();
@@ -465,13 +593,25 @@ MU_TEST(Hamming32Bit8ccDisabledOTLowMem) {
     GCTestStruct garbler_data = MakeGCTestStruct(scd_file_address, g_init_str,
                                                  g_input_str, "0", "0",
                                                  output_mode, disable_OT,
-                                                 low_mem_foot, clock_cycles);
+                                                 low_mem_foot, clock_cycles
+#ifdef HW_ACLRTR					
+												, aclrtr, acc_file_address
+#endif					
+					);
     GCTestStruct eval_data = MakeGCTestStruct(scd_file_address, e_init_str,
                                               e_input_str, output_str, "0",
                                               output_mode, disable_OT,
-                                              low_mem_foot, clock_cycles);
+                                              low_mem_foot, clock_cycles
+#ifdef HW_ACLRTR					
+											, aclrtr, acc_file_address
+#endif					
+					);
 
     ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
+    mu_assert(ret == SUCCESS, "TcpipTestRun");
+	
+	garbler_data.aclrtr = true;
+	ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
 
   }
@@ -490,6 +630,10 @@ MU_TEST(Hamming32Bit8ccLowMem) {
   uint64_t clock_cycles = 8;
   bool disable_OT = false;
   bool low_mem_foot = true;
+#ifdef HW_ACLRTR					
+  bool aclrtr = false;
+  string acc_file_address = string(TINYGARBLE_SOURCE_DIR) + "/hw_aclrtr";
+#endif
   for (int i = 0; i < TEST_REPEAT; i++) {
     uint32_t x[2];
     x[0] = (uint32_t) rand();
@@ -510,13 +654,25 @@ MU_TEST(Hamming32Bit8ccLowMem) {
     GCTestStruct garbler_data = MakeGCTestStruct(scd_file_address, g_init_str,
                                                  g_input_str, "0", "0",
                                                  output_mode, disable_OT,
-                                                 low_mem_foot, clock_cycles);
+                                                 low_mem_foot, clock_cycles
+#ifdef HW_ACLRTR					
+												, aclrtr, acc_file_address
+#endif					
+					);
     GCTestStruct eval_data = MakeGCTestStruct(scd_file_address, e_init_str,
                                               e_input_str, output_str, "0",
                                               output_mode, disable_OT,
-                                              low_mem_foot, clock_cycles);
+                                              low_mem_foot, clock_cycles
+#ifdef HW_ACLRTR					
+											, aclrtr, acc_file_address
+#endif					
+					);
 
     ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
+    mu_assert(ret == SUCCESS, "TcpipTestRun");
+	
+	garbler_data.aclrtr = true;
+	ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
 
   }
