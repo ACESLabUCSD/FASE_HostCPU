@@ -188,9 +188,11 @@ MU_TEST(Mux8Bit) {
     ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
 	
+#ifdef HW_ACLRTR	
 	garbler_data.aclrtr = true;
 	ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
+#endif	
   }
 }
 
@@ -247,9 +249,11 @@ MU_TEST(Sum1Bit) {
     ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
 	
+#ifdef HW_ACLRTR	
 	garbler_data.aclrtr = true;
 	ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
+#endif	
 
   }
 }
@@ -305,10 +309,11 @@ MU_TEST(Sum8Bit) {
 
     ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
-	
+#ifdef HW_ACLRTR	
 	garbler_data.aclrtr = true;
 	ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
+#endif	
   }
 }
 
@@ -365,9 +370,11 @@ MU_TEST(Hamming32Bit1cc) {
     ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
 	
+#ifdef HW_ACLRTR	
 	garbler_data.aclrtr = true;
 	ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
+#endif	
   }
 }
 
@@ -424,9 +431,11 @@ MU_TEST(Hamming32Bit8cc) {
     ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
 	
+#ifdef HW_ACLRTR	
 	garbler_data.aclrtr = true;
 	ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
+#endif	
 
   }
 }
@@ -484,9 +493,11 @@ MU_TEST(Hamming32Bit8ccDisabledOT) {
     ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
 	
+#ifdef HW_ACLRTR	
 	garbler_data.aclrtr = true;
 	ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
+#endif	
 
   }
 }
@@ -549,9 +560,11 @@ MU_TEST(Hamming32Bit8ccWithMask) {
     ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
 	
+#ifdef HW_ACLRTR	
 	garbler_data.aclrtr = true;
 	ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
+#endif	
 
   }
 }
@@ -610,9 +623,11 @@ MU_TEST(Hamming32Bit8ccDisabledOTLowMem) {
     ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
 	
+#ifdef HW_ACLRTR	
 	garbler_data.aclrtr = true;
 	ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
+#endif	
 
   }
 }
@@ -671,9 +686,11 @@ MU_TEST(Hamming32Bit8ccLowMem) {
     ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
 	
+#ifdef HW_ACLRTR	
 	garbler_data.aclrtr = true;
 	ret = TcpipTestRun(Alice, (void *) &garbler_data, Bob, (void *) &eval_data);
     mu_assert(ret == SUCCESS, "TcpipTestRun");
+#endif	
 
   }
 }

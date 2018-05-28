@@ -78,6 +78,9 @@ int Garble(const GarbledCircuit& garbled_circuit, block* const_labels,
   
 #ifdef HW_ACLRTR
 	if(aclrtr){
+		uint64_t comm_time = 0;
+		uint64_t garble_time = 0;
+		
 		string table_file(acc_file_address+"/Tables.txt");
 		ifstream ftin;
 		ftin.open(table_file.c_str(), std::ios::in);
@@ -93,6 +96,7 @@ int Garble(const GarbledCircuit& garbled_circuit, block* const_labels,
 		
 		string rows = "";
 		for (uint64_t cid = 0; cid < clock_cycles; cid++) {
+			uint64_t garble_start_time = RDTSC;
 			for (uint64_t i = 0; i < num_of_non_xor; i++) {
 				ftin >> rows;
 				Str2Block(rows, &(garbled_tables[2*i]));
@@ -107,8 +111,22 @@ int Garble(const GarbledCircuit& garbled_circuit, block* const_labels,
 				printBlock(garbled_tables[2*i+1]); 
 #endif
 			}
-			CHECK(SendData(connfd, garbled_tables, 2 * num_of_non_xor * sizeof(block)));		
+			garble_time += RDTSC - garble_start_time;
+			
+			uint64_t comm_start_time = RDTSC;
+			CHECK(SendData(connfd, garbled_tables, 2 * num_of_non_xor * sizeof(block)));
+			comm_time += RDTSC - comm_start_time;
 		}
+		
+		LOG(INFO) << "Alice communication time (cc) = " << comm_time
+			<< "\t(cc/gate) = "
+			<< (comm_time) / ((double) garbled_circuit.gate_size * clock_cycles)
+			<< endl;
+
+		LOG(INFO)
+			<< "Alice garbling time (cc) = " << garble_time << "\t(cc/gate) = "
+			<< (garble_time) / ((double) garbled_circuit.gate_size * clock_cycles)
+			<< endl;	
 		
 		return SUCCESS;
 	}
