@@ -933,49 +933,46 @@ int GarbleTransferOutput(const GarbledCircuit& garbled_circuit,
 			  , bool aclrtr, string acc_file_address
 #endif					
 					) {
+	uint64_t output_size;
 #ifdef HW_ACLRTR
 	string omask_file(acc_file_address+"/OMasks.txt");
-	if(aclrtr){
-		ifstream fmin;		
+	ifstream fmin;
+	ofstream fmout;
+	if(aclrtr){				
 		fmin.open(omask_file.c_str(), std::ios::in);
 		if (!fmin.good()) {
 			LOG(ERROR) << "file not found:" << omask_file << endl;
 			return -1;
-		}		
-		uint64_t output_size;
-		fmin >> output_size;
-		short garble_output_type;
-		
-		for (uint64_t cid = 0; cid < clock_cycles; cid++) {
-			for (uint64_t i = 0; i < output_size; i++) {
-				fmin >> garble_output_type;
-				CHECK(SendData(connfd, &garble_output_type, sizeof(short)));
-			}			
 		}
-		fmin.close();
-		return SUCCESS;
+		fmin >> output_size;
 	}
-	
-	ofstream fmout;
-	fmout.open(omask_file.c_str(), std::ofstream::out);
-	fmout << garbled_circuit.output_size << endl;
-	for (uint64_t cid = 0; cid < clock_cycles; cid++) {
-		for (uint64_t i = 0; i < garbled_circuit.output_size; i++) {
-			short garble_output_type = get_LSB(
-				output_labels[(cid * garbled_circuit.output_size + i) * 2 + 0]);
-			fmout << garble_output_type << endl; 
-		}		
+	else{
+#endif		
+		output_size = garbled_circuit.output_size;
+#ifdef HW_ACLRTR
+		fmout.open(omask_file.c_str(), std::ofstream::out);
+		fmout << output_size << endl;
 	}
-	fmout.close();
 #endif
   BIGNUM* output_mask_bn = BN_new();
   BN_hex2bn(&output_mask_bn, output_mask.c_str());
 
   BIGNUM* output_bn = BN_new();
   for (uint64_t cid = 0; cid < clock_cycles; cid++) {
-    for (uint64_t i = 0; i < garbled_circuit.output_size; i++) {
-      short garble_output_type = get_LSB(
-          output_labels[(cid * garbled_circuit.output_size + i) * 2 + 0]);
+    for (uint64_t i = 0; i < output_size; i++) {
+	  short garble_output_type;
+#ifdef HW_ACLRTR
+	  if(aclrtr){
+		fmin >> garble_output_type;  
+	  }
+	  else{
+#endif
+        garble_output_type = get_LSB(
+            output_labels[(cid * garbled_circuit.output_size + i) * 2 + 0]);
+#ifdef HW_ACLRTR
+	    fmout << garble_output_type << endl; 
+	  }
+#endif
       short eval_output_type;
       if (cid * garbled_circuit.output_size + i
           >= (uint64_t) BN_num_bits(output_mask_bn)
@@ -993,6 +990,10 @@ int GarbleTransferOutput(const GarbledCircuit& garbled_circuit,
       }
     }
   } 
+#ifdef HW_ACLRTR
+  if(aclrtr) fmin.close();
+  fmout.close();
+#endif
   OutputBN2Str(garbled_circuit, output_bn, clock_cycles, output_mode,
                output_str);
 
