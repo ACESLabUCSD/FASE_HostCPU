@@ -95,32 +95,35 @@ int Garble(const GarbledCircuit& garbled_circuit, block* const_labels,
 		
 		uint64_t num_of_non_xor = NumOfNonXor(garbled_circuit);
 		block* garbled_tables = nullptr;
-		CHECK_ALLOC(garbled_tables = new block[num_of_non_xor * 2]);
-		
-		string rows = "";
-		for (uint64_t cid = 0; cid < clock_cycles; cid++) {
-			uint64_t garble_start_time = RDTSC;
+		CHECK_ALLOC(garbled_tables = new block[clock_cycles * num_of_non_xor * 2]);	//allocating for all clock cycles to make binary file i/o faster
 #ifndef HW_ACLRTR_TEXT_IO
-			ftin.read((char*)garbled_tables, 2 * num_of_non_xor * sizeof(block)); 
+		uint64_t garble_start_time = RDTSC;
+		ftin.read((char*)garbled_tables, clock_cycles * num_of_non_xor * 2 * sizeof(block)); 
+		garble_time += RDTSC - garble_start_time;
 #endif
-			for (uint64_t i = 0; i < num_of_non_xor; i++) {
+		for (uint64_t cid = 0; cid < clock_cycles; cid++) {
 #ifdef HW_ACLRTR_TEXT_IO
+			uint64_t garble_start_time = RDTSC;
+			for (uint64_t i = 0; i < num_of_non_xor; i++) {
+				string rows = "";
 				ftin >> rows;
-				Str2Block(rows, &(garbled_tables[2*i]));
+				Str2Block(rows, &(garbled_tables[cid*num_of_non_xor*2 + 2*i]));
 				ftin >> rows;
-				Str2Block(rows, &(garbled_tables[2*i+1]));
-#endif
-#ifdef HW_ACLRTR_PRINT	
-				LOG(INFO) << cid << ":\tgarbled_tables[" << 2*i <<"]:\t";
-				printBlock(garbled_tables[2*i]);
-				LOG(INFO) << cid << ":\tgarbled_tables[" << 2*i+1 <<"]:\t";
-				printBlock(garbled_tables[2*i+1]); 
-#endif
+				Str2Block(rows, &(garbled_tables[cid*num_of_non_xor*2 + 2*i+1]));
 			}
 			garble_time += RDTSC - garble_start_time;
+#endif
+#ifdef HW_ACLRTR_PRINT	
+			for (uint64_t i = 0; i < num_of_non_xor; i++) {
+				LOG(INFO) << cid << ":\tgarbled_tables[" << 2*i <<"]:\t";
+				printBlock(garbled_tables[cid*num_of_non_xor*2 + 2*i]);
+				LOG(INFO) << cid << ":\tgarbled_tables[" << 2*i+1 <<"]:\t";
+				printBlock(garbled_tables[cid*num_of_non_xor*2 + 2*i+1]); 
+			}
+#endif
 			
 			uint64_t comm_start_time = RDTSC;
-			CHECK(SendData(connfd, garbled_tables, 2 * num_of_non_xor * sizeof(block)));
+			CHECK(SendData(connfd, &garbled_tables[cid*num_of_non_xor * 2], 2 * num_of_non_xor * sizeof(block)));
 			comm_time += RDTSC - comm_start_time;
 		}
 		
