@@ -100,12 +100,12 @@ int main(int argc, char* argv[]) {
 			return -1;
 		}		
 		uint64_t bin_rd_start_time = RDTSC;
-		fcheck.read((char*)labels_check, sizeof(block)*SIZE); 
+		fcheck.read((char*)labels_check, sizeof(block)*num_block); 
 		uint64_t bin_rd_time =  RDTSC - bin_rd_start_time;			
 		fcheck.close();	
 
 		bool err = false;
-		for (uint i = 0; i < SIZE; i++) {
+		for (uint i = 0; i < num_block; i++) {
 			if(!CmpBlock(labels[i], labels_check[i])){
 				err = true;
 				LOG(ERROR) << "mismatch at label " << i << endl;
@@ -130,7 +130,7 @@ int main(int argc, char* argv[]) {
 			return -1;
 		}		
 		uint64_t bin_rd_start_time = RDTSC;
-		fin.read((char*)labels, sizeof(block)*SIZE); 
+		fin.read((char*)labels, sizeof(block)*num_block); 
 		uint64_t bin_rd_time =  RDTSC - bin_rd_start_time;			
 		fin.close();
 
