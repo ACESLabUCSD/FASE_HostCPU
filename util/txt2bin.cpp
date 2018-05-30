@@ -2,15 +2,7 @@
 #include <boost/program_options.hpp>
 #include "garbled_circuit/garbled_circuit.h"
 
-#include "scd/scd.h"
-#include "scd/scd_evaluator.h"
 #include "util/log.h"
-#include "crypto/aes.h"
-#include "crypto/BN.h"
-#include "crypto/OT.h"
-#include "crypto/OT_extension.h"
-#include "garbled_circuit/garbled_circuit_low_mem.h"
-#include "tcpip/tcpip.h"
 #include "util/common.h"
 #include "util/util.h"
 

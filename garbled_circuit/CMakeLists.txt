@@ -24,25 +24,6 @@ if (Boost_FOUND)
 endif (Boost_FOUND)
 target_link_libraries(TinyGarble -lrt)
 
-add_executable(txt2bin
-  "txt2bin.cpp"
-  "$<TARGET_OBJECTS:Garbled_Circuit_Garbled_Circuit>"
-  "$<TARGET_OBJECTS:Garbled_Circuit_Garbled_Circuit_Low_Mem>"
-  "$<TARGET_OBJECTS:Crypto_BN>"
-  "$<TARGET_OBJECTS:Crypto_OT>"
-  "$<TARGET_OBJECTS:Crypto_OT_Extension>"
-  "$<TARGET_OBJECTS:SCD_SCD>"
-  "$<TARGET_OBJECTS:Util_Util>"
-  "$<TARGET_OBJECTS:TCPIP_TCPIP>"
-  "$<TARGET_OBJECTS:Util_Log>")
-
-if (OPENSSL_FOUND)
-	target_link_libraries(txt2bin ${OPENSSL_LIBRARIES})
-endif (OPENSSL_FOUND)
-if (Boost_FOUND)
-  target_link_libraries(txt2bin ${Boost_LIBRARIES})
-endif (Boost_FOUND)
-target_link_libraries(txt2bin -lrt)
 
 add_executable(Garbled_Circuit_Test
   "garbled_circuit_test.cpp"
