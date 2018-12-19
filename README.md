@@ -4,7 +4,7 @@ This is the host CPU of the [FPGA accelerator for Garbled Circuit](https://githu
 
 This is based on the [TinyGarble](https://github.com/esonghori/TinyGarble) framework. Please read the README of TinyGarble for more details, especially on the dependencies, compilation, and general flow. A few of the features of TinyGarble (most notably <i>Skipgate</i>) is not available in this implementation. In addition, it does not include the GC optimized circuit synthesis library. Please go to the original TinyGarble repo for the libaray. 
 
-* `garbled_circuit/TinyGarble`: TinyGarble main binary:
+`garbled_circuit/TinyGarble`: TinyGarble main binary:
 ```
   -h [ --help ]                         produce help message
   -a [ --alice ]                        Run as Alice (server).
@@ -17,10 +17,10 @@ This is based on the [TinyGarble](https://github.com/esonghori/TinyGarble) frame
                                         running as Bob.
   --init arg (=0)                       Hexadecimal init for initializing DFFs.
   --input arg (=0)                      Hexadecimal input.
-  --clock_cycles arg (=1)               Number of clock cycles to evaluate the
+  -c [ --clock_cycles ] arg (=1)        Number of clock cycles to evaluate the
                                         circuit.
   --dump_directory arg                  Directory for dumping memory hex files.
-  --disable_OT                          Disable Oblivious Transfer (OT) for
+  --disable_OT                          Disables Oblivious Transfer (OT) for
                                         transferring labels. WARNING: OT is
                                         crucial for GC security.
   --low_mem_foot                        Enables low memory footprint mode for
@@ -32,11 +32,22 @@ This is based on the [TinyGarble](https://github.com/esonghori/TinyGarble) frame
                                         and 1 belongs to Alice.
   -w [ --acc ]                          There is a HW accelerator generating
                                         the garbled tables.
-  -d [ --acc_dir ] arg (=/home/siam/git/hostCPU_TG/hw_aclrtr)
-                                        Directory of HW accelerator generated
+  -d [ --acc_dir ] arg (=/hw_aclrtr)    Directory of HW accelerator generated
                                         the garbled tables.
   --output_mode arg (=0)                0: normal, 1:separated by clock 2:last
                                         clock.
 ```
+For generating the reference files to test the HW acclerator, run `TinyGarble` without the `-w` flag. Sample labels and AES keys are provided in the *hw_aclrtr* directory. 
 
-For generating the reference files to test the HW acclerator, run `TinyGarble` without the `-w` flag. 
+To convert text files to binary, run `util/txt2bin`
+```
+  -h [ --help ]                         produce help message
+  -t [ --text ] arg (=/home/siam/git/hostCPU_TG/hw_aclrtr/Labels.txt)
+                                        text file
+  -b [ --bin ] arg (=/home/siam/git/hostCPU_TG/hw_aclrtr/Labels.bin)
+                                        binary file
+  -n [ --num_block ] arg (=512)         number of blocks
+  -r [ --bin2text ]                     binary to text conversion, the default
+                                        is text to binary
+```
+To turn on the binary mode undefine `HW_ACLRTR_TEXT_IO` in `garbled_circuit/garbled_circuit.h`
