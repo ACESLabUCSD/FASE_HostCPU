@@ -187,9 +187,10 @@ int main(int argc, char* argv[]) {
    "Hexadecimal mask for output. 0 indicates that output belongs to Bob, "
    "and 1 belongs to Alice.")  //  
 #ifdef HW_ACLRTR
-	("acc,w",
-   po::value<string>(&acc_file_address),
-   "There is a HW accelerator generating the garbled tables.")  //
+	("acc,w", "There is a HW accelerator generating the garbled tables.")  //
+	("acc_dir,d",
+   po::value<string>(&acc_file_address)->default_value(string(TINYGARBLE_SOURCE_DIR)+"/hw_aclrtr"),
+   "Directory of HW accelerator generated the garbled tables.")  //
 #endif
   ("output_mode", po::value<int>(&output_mode)->default_value(0),
    "0: normal, 1:separated by clock 2:last clock.");
@@ -216,9 +217,6 @@ int main(int argc, char* argv[]) {
               << endl;
   }
 #ifdef HW_ACLRTR  
-  if(acc_file_address.length() == 0){
-    acc_file_address = string(TINYGARBLE_SOURCE_DIR)+"/hw_aclrtr";
-  }
   if (vm.count("acc")) {
     aclrtr = true;
     LOG(INFO) << "Looking for HW accelerator generated garbled tables at " << acc_file_address
