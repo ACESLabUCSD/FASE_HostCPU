@@ -1,0 +1,11 @@
+read_verilog ../../../TinyGarbleCircuitSynthesis/SynthesisLibrary/syn_lib/*.v
+read_verilog oneand.v
+hierarchy -check -top oneand
+proc; opt; flatten; opt; 
+techmap ; opt;
+abc -liberty ../../../TinyGarbleCircuitSynthesis/SynthesisLibrary/lib/asic_cell_yosys.lib -script ../../../TinyGarbleCircuitSynthesis/SynthesisLibrary/lib/script.abc; #change library for EMP or BMR
+opt; clean; opt;
+opt_clean -purge
+stat -liberty ../../../TinyGarbleCircuitSynthesis/SynthesisLibrary/lib/asic_cell_yosys.lib
+write_verilog -noattr -noexpr oneand_syn_yos.v
+exit
