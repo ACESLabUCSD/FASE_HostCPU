@@ -855,11 +855,11 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit,
 	string label_file;
 	ifstream flin;
 #ifdef HW_ACLRTR_TEXT_IO
-	label_file = acc_file_address + "/Labels.txt";
+	label_file = acc_file_address + "/Keys.txt";
 	flin.open(label_file.c_str(), std::ios::in);
 	string label = "";
 #else
-	label_file = acc_file_address + "/Labels.bin";
+	label_file = acc_file_address + "/Keys.bin";
 	flin.open(label_file.c_str(), std::ios::in|std::ios::binary);	
 #endif
 	if (!flin.good()) {
@@ -871,9 +871,14 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit,
   (*const_labels) = nullptr;
   CHECK_ALLOC((*const_labels) = new block[2 * 2]);
 #ifdef HW_ACLRTR
-/*#ifndef HW_ACLRTR_TEXT_IO
-	flin.read((char*)(*const_labels), 2 * 2 * sizeof(block));
-#endif*/
+	/*skip first two since they are R and AES keys*/
+#ifdef HW_ACLRTR_TEXT_IO
+	flin >> label;
+	flin >> label;
+#else
+	flin.read((char*)(&(*const_labels)[i * 2 + 0]), sizeof(block));
+	flin.read((char*)(&(*const_labels)[i * 2 + 0]), sizeof(block));
+#endif
 #endif
   for (uint i = 0; i < 2; i++) {
 #ifdef HW_ACLRTR
