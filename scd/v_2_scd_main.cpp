@@ -25,6 +25,9 @@
 #include "scd/scd.h"
 #include "scd/scheduling.h"
 #include "util/log.h"
+#ifdef HW_ACLRTR
+#include "util/util.h"
+#endif
 
 namespace po = boost::program_options;
 using std::ofstream;
@@ -34,7 +37,7 @@ int main(int argc, char** argv) {
   LogInitial(argc, argv);
 
   string input_netlist_file, brist_input_netlist_file;
-  string output_scd_file;
+  string output_scd_file, output_hscd_file;
 
   boost::format fmter(
       "Verilog to SCD, TinyGarble version %1%.%2%.%3%.\nAllowed options");
@@ -49,7 +52,9 @@ int main(int argc, char** argv) {
    "Input netlist (.txt) file address (in the format given by "
    "www.cs.bris.ac.uk/Research/CryptographySecurity/MPC/).")  //
   ("scd,o", po::value<string>(&output_scd_file),
-   "Output simple circuit description (scd) file address.");
+   "Output simple circuit description (scd) file address.")  //
+  ("hscd,w", po::value<string>(&output_hscd_file),
+   "Output hardware simple circuit description (hscd) file address.");
 
   po::variables_map vm;
   try {
@@ -74,12 +79,28 @@ int main(int argc, char** argv) {
   }
 
   string out_mapping_filename = output_scd_file + ".map";
+  
+#ifdef HW_ACLRTR  
+  bool hscd = false;
+  if (vm.count("hscd")) {
+    hscd = true;
+    if (output_hscd_file.empty()) {
+		std::cerr << "ERROR: output hscd file name must be given of (-w) flag is indicated." << endl;
+		std::cout << desc << endl;
+		return FAILURE;
+    } 
+  }
+#endif
 
   if (!input_netlist_file.empty()) {
     LOG(INFO) << "V2SCD " << input_netlist_file << " to " << output_scd_file
               << endl;
     if (Verilog2SCD(input_netlist_file, out_mapping_filename,
-                    output_scd_file) == FAILURE) {
+                    output_scd_file
+#ifdef HW_ACLRTR
+					, hscd, output_hscd_file
+#endif	
+					) == FAILURE) {
       LOG(ERROR) << "Verilog to SCD failed." << endl;
       return FAILURE;
     }

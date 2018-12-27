@@ -37,6 +37,9 @@
 int ReadSCD(const string& fileName, GarbledCircuit *garbledCircuit);
 
 int WriteSCD(const ReadCircuit &readCircuit, const string &fileName);
-
+#ifdef HW_ACLRTR 
+#define S 14 //width of gate id (or wire id)
+int WriteHSCD(const ReadCircuit &readCircuit, const string &fileName);
+#endif
 
 #endif /* SCD_SCD_H_ */

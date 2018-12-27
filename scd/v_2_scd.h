@@ -18,6 +18,7 @@
 #ifndef SCD_V_2_SCD_H_
 #define SCD_V_2_SCD_H_
 
+#include "garbled_circuit/garbled_circuit.h"
 #include <string>
 #include <vector>
 #include <utility>
@@ -111,7 +112,11 @@ class ReadCircuit {
 };
 
 int Verilog2SCD(const string &in_file_name, const string& out_mapping_filename,
-                const string &out_file_name);
+                const string &out_file_name
+#ifdef HW_ACLRTR
+			  , bool hscd, const string &output_hscd_file
+#endif
+				);
 int Bris2SCD(const string &in_file_name, const string& out_mapping_filename,
              const string &out_file_name);
 #endif

@@ -42,6 +42,10 @@
 #include <iostream>
 #include <new>
 #include "util/log.h"
+#ifdef HW_ACLRTR
+#include "garbled_circuit/garbled_circuit.h"
+#include "util/util.h"
+#endif
 
 int ReadSCD(const string& fileName, GarbledCircuit* garbledCircuit) {
   std::ifstream f(fileName, std::ios::out);
@@ -188,3 +192,61 @@ int WriteSCD(const ReadCircuit& readCircuit, const string &fileName) {
 
   return 0;
 }
+
+#ifdef HW_ACLRTR 
+int WriteHSCD(const ReadCircuit& readCircuit, const string &fileName) {
+  std::ofstream f(fileName.c_str(), std::ios::out);
+  if (!f.is_open()) {
+    LOG(ERROR) << "can't open " << fileName << endl;
+    return -1;
+  }
+  
+  string write_str;
+  vector<uint64_t> ckt_params(2);
+  vector<uint16_t> ckt_params_bit_len(2, S);
+  
+  ckt_params[0] = readCircuit.g_init_size;
+  ckt_params[1] = readCircuit.e_init_size;
+  write_str = formatGCInputString(ckt_params, ckt_params_bit_len);
+  f << write_str << endl;
+  
+  ckt_params[0] = readCircuit.g_input_size;
+  ckt_params[1] = readCircuit.e_input_size;
+  write_str = formatGCInputString(ckt_params, ckt_params_bit_len);
+  f << write_str << endl;
+  
+  ckt_params[0] = readCircuit.dff_size;
+  ckt_params[1] = readCircuit.output_size;
+  write_str = formatGCInputString(ckt_params, ckt_params_bit_len);
+  f << write_str << endl;
+  
+  ckt_params[0] = 0;
+  ckt_params[1] = readCircuit.gate_size;
+  write_str = formatGCInputString(ckt_params, ckt_params_bit_len);
+  f << write_str << endl;
+  
+  int gindex;
+  uint64_t init_input_size = readCircuit.g_init_size + readCircuit.e_init_size + readCircuit.g_input_size + readCircuit.e_input_size;
+  vector<uint64_t> gate_info(4);
+  vector<uint16_t> gate_info_bit_len{S-1, S, 4, 1};
+  uint64_t k = 0;
+  
+  for (uint64_t i = 0; i < readCircuit.gate_size; i++) {
+		gindex = readCircuit.task_schedule[i];
+	    gate_info[0] = readCircuit.gate_list[gindex].input[0];
+		gate_info[1] = readCircuit.gate_list[gindex].input[1];
+	    gate_info[2] = readCircuit.gate_list[gindex].type;
+		if ((gindex+init_input_size) == readCircuit.output_list[k]){
+			gate_info[3] = 1;
+			k++;
+		}
+		else gate_info[3] = 0;
+		write_str = formatGCInputString(gate_info, gate_info_bit_len);
+		f << write_str << endl;
+  }
+
+  f.close();
+  return 0;
+}
+
+#endif

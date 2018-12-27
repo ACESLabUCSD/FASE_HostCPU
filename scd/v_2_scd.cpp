@@ -21,11 +21,18 @@
 #include "scd/scd.h"
 #include "scd/scheduling.h"
 #include "util/log.h"
+#ifdef HW_ACLRTR
+#include "util/util.h"
+#endif
 
 using std::endl;
 
 int Verilog2SCD(const string &in_file_name, const string& out_mapping_filename,
-                const string &out_file_name) {
+                const string &out_file_name
+#ifdef HW_ACLRTR
+			  , bool hscd, const string &output_hscd_file
+#endif				
+				) {
 
   ReadCircuitString read_circuit_string;
   ReadCircuit read_circuit;
@@ -53,6 +60,15 @@ int Verilog2SCD(const string &in_file_name, const string& out_mapping_filename,
     LOG(ERROR) << "write result to SCD file failed." << endl;
     return FAILURE;
   }
+
+#ifdef HW_ACLRTR  
+  if(hscd){
+	    if (WriteHSCD(read_circuit, output_hscd_file) == FAILURE) {
+			LOG(ERROR) << "write result to HSCD file failed." << endl;
+			return FAILURE;
+		}
+	}
+#endif
 
   return SUCCESS;
 }
