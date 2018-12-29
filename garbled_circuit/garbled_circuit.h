@@ -42,7 +42,7 @@
 #include "crypto/block.h"
 
 #define HW_ACLRTR
-//#define HW_ACLRTR_PRINT
+#define HW_ACLRTR_PRINT
 #define HW_ACLRTR_TEXT_IO	
 
 using std::string;

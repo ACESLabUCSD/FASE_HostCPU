@@ -60,7 +60,11 @@ void SrandSSE(unsigned int seed) {
 }
 
 block RandomBlock() {
-
+#if REPRODUCIBLE	
+	static string rand_file(RANDFILE);
+	static ifstream frand(rand_file.c_str(), std::ios::in|std::ios::binary);
+	frand.read((char*)(&cur_seed), sizeof(block));
+#else
   block cur_seed_split;
   block multiplier;
   block adder;
@@ -87,7 +91,7 @@ block RandomBlock() {
   cur_seed_split = _mm_shuffle_epi32(cur_seed_split, _MM_SHUFFLE(2, 3, 0, 1));
   cur_seed = _mm_or_si128(cur_seed, cur_seed_split);
   cur_seed = _mm_add_epi32(cur_seed, adder);
-
+#endif 
   return cur_seed;
 
 }

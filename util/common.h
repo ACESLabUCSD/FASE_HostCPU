@@ -65,6 +65,9 @@ using std::endl;
   res;})
 #define fbits(v, p) ((v & (1 << p))>>p)
 
+#define	REPRODUCIBLE 1 //read random blocks from a file so that generated tables are reproducible, used for debugging
+#define RANDFILE string(TINYGARBLE_SOURCE_DIR)+"/util/Rand.bin"
+
 extern string dump_prefix;
 
 #endif /* UTIL_COMMON_H_ */
