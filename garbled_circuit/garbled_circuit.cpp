@@ -400,12 +400,12 @@ int Garble(const GarbledCircuit& garbled_circuit, block* const_labels,
 	ftout.write((char*)garbled_tables, 2 * num_of_non_xor * sizeof(block));
 #endif
 #ifdef HW_ACLRTR_PRINT	
-			for (uint64_t i = 0; i < num_of_non_xor; i++) {
-				LOG(INFO) << cid << ":\tgarbled_tables[" << 2*i <<"]:\t";
-				printBlock(garbled_tables[cid*num_of_non_xor*2 + 2*i]);
-				LOG(INFO) << cid << ":\tgarbled_tables[" << 2*i+1 <<"]:\t";
-				printBlock(garbled_tables[cid*num_of_non_xor*2 + 2*i+1]); 
-			}
+	for (uint64_t i = 0; i < num_of_non_xor; i++) {
+		LOG(INFO) << cid << ":\tgarbled_tables[" << 2*i <<"]:\t";
+		printBlock(garbled_tables[2*i]);
+		LOG(INFO) << cid << ":\tgarbled_tables[" << 2*i+1 <<"]:\t";
+		printBlock(garbled_tables[2*i+1]); 
+	}
 #endif
 #endif
   }
@@ -983,9 +983,9 @@ int GarbleMakeLabels(const GarbledCircuit& garbled_circuit,
 			(*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0] = RandomBlock();
 #ifdef HW_ACLRTR
 #ifdef HW_ACLRTR_TEXT_IO	
-			printBlock((*input_labels)[i * 2 + 0], flout);
+			printBlock((*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0], flout);
 #else	
-			flout.write((char*)(&(*input_labels)[i * 2 + 0]), sizeof(block));
+			flout.write((char*)(&(*input_labels)[(cid * garbled_circuit.get_input_size() + i) * 2 + 0]), sizeof(block));
 #endif	
 		}
 #ifdef HW_ACLRTR_PRINT	
