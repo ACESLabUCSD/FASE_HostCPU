@@ -220,7 +220,14 @@ int WriteHSCD(const ReadCircuit& readCircuit, const string &fileName) {
   write_str = formatGCInputString(ckt_params, ckt_params_bit_len);
   f << write_str << endl;
   
-  ckt_params[0] = 0;
+  uint64_t num_XOR = 0;
+  short type;
+  for (uint64_t i = 0; i < readCircuit.gate_size; i++) {
+		type = readCircuit.gate_list[i].type;
+	    if((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE)) num_XOR++;
+  }
+  
+  ckt_params[0] = num_XOR;
   ckt_params[1] = readCircuit.gate_size;
   write_str = formatGCInputString(ckt_params, ckt_params_bit_len);
   f << write_str << endl;
