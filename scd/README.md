@@ -26,8 +26,11 @@ Wires are indexed according to this order:
 2- e_init  
 3- g_input  
 4- e_input  
-5- gates' output (A gate's output index is same as the gate's index plus the 
-	gate output offset which is equal to size of init and input wires.)  
+5- dffs' output  
+6- gates' output 
+
+The output index of a dff or gate is same as the its index plus the 
+gate output offset which is equal to size of init and input wires.)  
 
 ## SCD Format
 Unlike JustGarble's SCD, TinyGarble's SCD is in ASCII format and human-readable.
@@ -43,9 +46,9 @@ The format consists of seven lines:
 
 ## HSCD Format
 HSCD is also in ASCII format and human-readable.
-The format consists of (`4+dff_size+gate_size`) number of line each holding a 32-bit integer.
+The format consists of (`4+dff_size+gate_size`) number of lines each holding a 32-bit integer.
 
-| # lines | Contents | Bit-widths |
+| # of lines | Contents | Bit-widths |
 | --- | --- | --- |
 | 1 | -, `e_init_size`, `g_init_size` | 4, 14, 14 |
 | 1 | -, `e_input_size`, `g_input_size` | 4, 14, 14  |
