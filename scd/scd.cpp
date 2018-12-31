@@ -45,6 +45,7 @@
 #ifdef HW_ACLRTR
 #include "garbled_circuit/garbled_circuit.h"
 #include "util/util.h"
+#include <bits/stdc++.h> 
 #endif
 
 int ReadSCD(const string& fileName, GarbledCircuit* garbledCircuit) {
@@ -232,22 +233,39 @@ int WriteHSCD(const ReadCircuit& readCircuit, const string &fileName) {
   write_str = formatGCInputString(ckt_params, ckt_params_bit_len);
   f << write_str << endl;
   
-  int gindex;
-  uint64_t init_input_size = readCircuit.g_init_size + readCircuit.e_init_size + readCircuit.g_input_size + readCircuit.e_input_size;
   vector<uint64_t> gate_info(4);
   vector<uint16_t> gate_info_bit_len{S-1, S, 4, 1};
-  uint64_t k = 0;
   
+  gate_info[3] = 0;
+  for (uint64_t i = 0; i < readCircuit.dff_size; i++) {
+		gate_info[0] = readCircuit.dff_list[i].input[0];  //D
+		gate_info[1] = readCircuit.dff_list[i].input[1];  //I
+		gate_info[2] = DFFGATE;
+		write_str = formatGCInputString(gate_info, gate_info_bit_len);
+		f << write_str << endl;
+  }
+   
+  vector<uint64_t> sorted_output_list{readCircuit.output_list};
+  sort(sorted_output_list.begin(), sorted_output_list.end());
+  vector<uint64_t> is_output(readCircuit.gate_size, 0);  
+  uint64_t init_input_dff_size = readCircuit.g_init_size + readCircuit.e_init_size + readCircuit.g_input_size 
+									+ readCircuit.e_input_size + readCircuit.dff_size;     
+  int gindex; 
+	
+  uint64_t k = 0;
+  for (uint64_t i = 0; i < readCircuit.gate_size; i++){
+	gindex = readCircuit.task_schedule[i];  
+	if ((i+init_input_dff_size) == sorted_output_list[k]){
+			is_output[gindex] = 1;
+			k++;
+		}  
+  }	   
   for (uint64_t i = 0; i < readCircuit.gate_size; i++) {
 		gindex = readCircuit.task_schedule[i];
 	    gate_info[0] = readCircuit.gate_list[gindex].input[0];
 		gate_info[1] = readCircuit.gate_list[gindex].input[1];
 	    gate_info[2] = readCircuit.gate_list[gindex].type;
-		if ((gindex+init_input_size) == readCircuit.output_list[k]){
-			gate_info[3] = 1;
-			k++;
-		}
-		else gate_info[3] = 0;
+		gate_info[3] = is_output[gindex];
 		write_str = formatGCInputString(gate_info, gate_info_bit_len);
 		f << write_str << endl;
   }
