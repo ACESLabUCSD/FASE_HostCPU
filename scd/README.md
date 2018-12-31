@@ -3,7 +3,8 @@ Simple Circuit Description (SCD)
 The initial idea of a Simple Circuit Description (SCD) was proposed in JustGarble 
 paper (S&P'13) to represent a acyclic Boolean circuit. TinyGarble paper (S&P'15)
 proposed a modified version of SCD which supports a sequential circuit with 
-flip-flops.
+flip-flops. We also present a version called HSCD suitable for streaming which is 
+more amenable to FPGAs.
 
 ## Circuit Format
 TinyGarble's V2SCD accepts Verilog netlist circuits with a special format. 
@@ -38,7 +39,22 @@ The format consists of seven lines:
 4- gate's `type` (defined in [util/common.h](util/common.h))  
 5- `outputs` index  
 6- Flip-Flop's `D` (data wire index)  
-7- Flip-Flop's `I` (initial value index chosen from `g_init` and `e_init`).  
+7- Flip-Flop's `I` (initial value index chosen from `g_init` and `e_init`).    
+
+## HSCD Format
+HSCD is also in ASCII format and human-readable.
+The format consists of (`4+dff_size+gate_size`) number of line each holding a 32-bit integer.
+
+| # lines | Contents | Bit-widths |
+| --- | --- | --- |
+| 1 | -, `e_init_size`, `g_init_size` | 4, 14, 14 |
+| 1 | -, `e_input_size`, `g_input_size` | 4, 14, 14  |
+| 1 | -,  `dff_size`, `output_size` | 4, 14, 14  |
+| 1 | -, `XOR_size` , `gate_size`| 4, 14, 14  |
+| `dff_size` | `D`, `I`, -1, 0 | 13, 14, 4, 1 |
+| `gate_size` | `input0`, `input1`, `type`, `is_output` | 13, 14, 4, 1 | 
+
+`is_output` is a Boolean value that indicates whether or not the gate's output is also a circuit output.  
 
 ## References
 - Mihir Bellare, Viet Tung Hoang, Sriram Keelveedhi, and Phillip Rogaway.
