@@ -236,11 +236,11 @@ int WriteHSCD(const ReadCircuit& readCircuit, const string &fileName) {
   vector<uint64_t> gate_info(4);
   vector<uint16_t> gate_info_bit_len{S-1, S, 4, 1};
   
+  gate_info[2] = DFFGATE;
   gate_info[3] = 0;
   for (uint64_t i = 0; i < readCircuit.dff_size; i++) {
 		gate_info[0] = readCircuit.dff_list[i].input[0];  //D
 		gate_info[1] = readCircuit.dff_list[i].input[1];  //I
-		gate_info[2] = DFFGATE;
 		write_str = formatGCInputString(gate_info, gate_info_bit_len);
 		f << write_str << endl;
   }
