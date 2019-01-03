@@ -4,7 +4,7 @@ This is the host CPU of the [FPGA accelerator for Garbled Circuit](https://githu
 
 This is based on the [TinyGarble](https://github.com/esonghori/TinyGarble) framework. Please read the README of TinyGarble for more details, especially on the dependencies, compilation, and general flow. A few of the features of TinyGarble (most notably <i>Skipgate</i>) is not available in this implementation. In addition, it does not include the GC optimized circuit synthesis library. Please go to the original TinyGarble repo for the libaray. 
 
-`garbled_circuit/TinyGarble`: TinyGarble main binary:
+TinyGarble main binary: `garbled_circuit/TinyGarble`
 ```
   -h [ --help ]                         produce help message
   -a [ --alice ]                        Run as Alice (server).
@@ -37,7 +37,22 @@ This is based on the [TinyGarble](https://github.com/esonghori/TinyGarble) frame
   --output_mode arg (=0)                0: normal, 1:separated by clock 2:last
                                         clock.
 ```
-For generating the reference files to test the HW acclerator, run `TinyGarble` without the `-w` flag. Sample labels and AES keys are provided in the *hw_aclrtr* directory. 
+For generating the reference files to test the HW acclerator, run `TinyGarble` without the `-w` flag. 
+
+To generate the netlist from the synthesized Verilog files run `scd/V2SCD_Main`
+
+```
+  -h [ --help ]               produce help message.
+  -i [ --netlist ] arg        Input netlist (verilog .v) file address.
+  -b [ --brist_netlist ] arg  Input netlist (.txt) file address (in the format
+                              given by www.cs.bris.ac.uk/Research/CryptographyS
+                              ecurity/MPC/).
+  -o [ --scd ] arg            Output simple circuit description (scd) file
+                              address.
+  -w [ --hscd ] arg           Output hardware simple circuit description (hscd)
+                              file address.
+  -p [ --pipe_stg ] arg (=10) Number of pipelined stages for non-XOR gates.
+```
 
 To convert text files to binary, run `util/txt2bin`
 ```
