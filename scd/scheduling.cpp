@@ -19,316 +19,15 @@
 
 #include <string>
 #include <cstring>
+#include <algorithm>
 #include "scd/parse_netlist.h"
 #include "util/common.h"
 #include "util/log.h"
+#include "garbled_circuit/garbled_circuit.h"
 
-int QuickSort(int64_t *arr, int64_t *index, int64_t left, int64_t right) {
-  int64_t i = left, j = right;
-  int64_t tmp;
-  int64_t pivot = arr[(left + right) / 2];
+using namespace std;
 
-  /* partition */
-  while (i <= j) {
-    while (arr[i] > pivot)
-      i++;
-    while (arr[j] < pivot)
-      j--;
-    if (i <= j) {
-      tmp = arr[i];
-      arr[i] = arr[j];
-      arr[j] = tmp;
-
-      tmp = index[i];
-      index[i] = index[j];
-      index[j] = tmp;
-
-      i++;
-      j--;
-    }
-  }
-  /* recursion */
-  if (left < j)
-    QuickSort(arr, index, left, j);
-  if (i < right)
-    QuickSort(arr, index, i, right);
-
-  return SUCCESS;
-}
-
-int TopSort(const vector<ReadGate>& G, int64_t no_task, int64_t *index) {
-
-  // calculate static b-level
-  int64_t *sl = new int64_t[no_task];
-
-  for (int64_t i = 0; i < no_task; i++)
-    index[i] = i;
-
-  for (int64_t i = no_task - 1; i >= 0; i--) {
-    int64_t max = 0;
-    for (int64_t j = i + 1; j < no_task; j++) {
-      if (G[j].input[0] == G[i].output)
-        if (sl[j] > max)
-          max = sl[j];
-      if (G[j].input[1] == G[i].output)
-        if (sl[j] > max)
-          max = sl[j];
-    }
-    sl[i] = 1 + max;
-  }
-
-  // sort in descending order of static b-level
-  QuickSort(sl, index, 0, no_task - 1);
-
-  delete[] sl;
-  return SUCCESS;
-}
-
-int64_t GetMinIndex(int64_t *arr, int64_t size) {
-  int64_t minimum = arr[0], min_index = 0, i = 1;
-  while (i < size) {
-    if (arr[i] < minimum) {
-      minimum = arr[i];
-      min_index = i;
-    }
-    i++;
-  }
-  return min_index;
-}
-
-int64_t GetMax(int64_t *arr, int64_t size) {
-  int64_t maximum = arr[0], i = 1;
-  while (i < size) {
-    if (arr[i] > maximum)
-      maximum = arr[i];
-    i++;
-  }
-  return maximum;
-}
-
-int DFS(const ReadCircuit &read_circuit, vector<int> *status, int wire_index,
-        vector<int> *loop) {
-
-  const vector<ReadGate>& Gates = read_circuit.gate_list;
-  int64_t no_of_input_dff = read_circuit.get_init_input_size()
-      + read_circuit.dff_size;
-
-  if (wire_index < 0 || (*status)[wire_index] == 2) {  // clear
-    return SUCCESS;
-  } else if ((*status)[wire_index] == 1) {  // loop
-    loop->push_back(wire_index);
-    return FAILURE;
-  } else {
-    (*status)[wire_index] = 1;
-    if (DFS(read_circuit, status, Gates[wire_index - no_of_input_dff].input[0],
-            loop) == FAILURE) {
-      loop->push_back(wire_index);
-      return FAILURE;
-    }
-    if (DFS(read_circuit, status, Gates[wire_index - no_of_input_dff].input[1],
-            loop) == FAILURE) {
-      loop->push_back(wire_index);
-      return FAILURE;
-    }
-    (*status)[wire_index] = 2;
-  }
-  return SUCCESS;
-}
-
-int FindPath(const ReadCircuit &read_circuit, vector<int> *loop) {
-
-  vector<int> path;
-  int64_t no_of_input_dff = read_circuit.get_init_input_size()
-      + read_circuit.dff_size;
-  int64_t no_of_gate = read_circuit.gate_size;
-
-  vector<int> status(no_of_input_dff + no_of_gate);
-  for (int64_t i = 0; i < no_of_input_dff + no_of_gate; i++) {
-    if (i < no_of_input_dff) {  // inputs or DFF inputs
-      status[i] = 2;  //clear
-    } else {
-      status[i] = 0;  //un visited
-    }
-  }
-
-  for (uint64_t i = 0; i < read_circuit.dff_size; i++) {
-    if (DFS(read_circuit, &status, read_circuit.dff_list[i].input[0],
-            loop) == FAILURE)
-      return FAILURE;
-  }
-
-  for (uint64_t i = 0; i < read_circuit.output_size; i++) {
-    if (DFS(read_circuit, &status, read_circuit.output_list[i], loop) == FAILURE)
-      return FAILURE;
-  }
-
-  for (int64_t i = 0; i < no_of_input_dff + no_of_gate; i++) {
-    if (status[i] != 2)
-      return FAILURE;
-  }
-
-  return SUCCESS;
-}
-
-int Schedule(const ReadCircuit &read_circuit, int64_t no_core, int64_t **core) {
-
-  const vector<ReadGate>& G = read_circuit.gate_list;
-  int64_t no_task;
-
-  int64_t input_size = read_circuit.get_init_input_size();
-
-  int64_t no_of_input_dff = input_size + read_circuit.dff_size;
-  no_task = read_circuit.gate_size;
-
-  vector<int> loop;
-  if (FindPath(read_circuit, &loop) != SUCCESS) {
-    LOG(ERROR) << "There is a loop in the circuit." << endl;
-
-    string loop_srt = "";
-    for (uint64_t i = 0; i < loop.size(); i++) {
-      loop_srt += std::to_string(loop[i] - no_of_input_dff) + " -> ";
-    }
-    LOG(ERROR) << loop_srt << endl;
-
-    //return FAILURE;
-  }
-
-  int64_t *index;
-  index = new int64_t[no_task];
-  TopSort(G, no_task, index);
-
-  // start of scheduling
-  int64_t *p0, *p1, *core_busy, *core_index;
-
-  p0 = new int64_t[no_task];
-  memset(p0, -1, no_task * sizeof(int64_t));
-  p1 = new int64_t[no_task];
-  memset(p1, -1, no_task * sizeof(int64_t));
-
-  core_index = new int64_t[no_core];
-  memset(core_index, 0, no_core * sizeof(int64_t));
-  core_busy = new int64_t[no_core];
-  memset(core_busy, 0, no_core * sizeof(int64_t));
-
-  int64_t scheduled = 0;
-  while (scheduled < no_task) {
-    for (int64_t i = 0; i < no_task; i++) {
-      if (p0[index[i]] == -1) {  // not assigned yet
-        if (((G[index[i]].input[0] - no_of_input_dff < 0)
-            || (p0[G[index[i]].input[0] - no_of_input_dff] != -1))) {
-          if ((G[index[i]].input[1] - no_of_input_dff < 0)
-              || (p0[G[index[i]].input[1] - no_of_input_dff] != -1)) {  //ready
-            p1[index[i]] = GetMinIndex(core_busy, no_core);
-            core[p1[index[i]]][core_index[p1[index[i]]]] = index[i];
-            core_index[p1[index[i]]]++;
-            core_busy[p1[index[i]]] = core_busy[p1[index[i]]] + 1;
-            scheduled++;
-          }
-        }
-      }
-    }
-
-    for (int64_t i = 0; i < no_task; i++) {
-      p0[i] = p1[i];
-    }
-  }
-
-  delete[] index;
-  delete[] p0;
-  delete[] p1;
-  delete[] core_index;
-  delete[] core_busy;
-
-  return SUCCESS;
-}
-
-int TopologicalSortMultiCore(ReadCircuit &read_circuit) {
-
-  int64_t **core;
-  core = new int64_t*[1];  // no of rows = no_core
-  core[0] = new int64_t[read_circuit.gate_size + 1];  // no of columns = no_of_gates+1
-  memset(core[0], -1, (read_circuit.gate_size + 1) * sizeof(uint64_t));
-
-  Schedule(read_circuit, 1, core);
-
-  read_circuit.task_schedule.resize(read_circuit.gate_size);
-
-  vector<int64_t> ts(read_circuit.gate_size);
-
-  int64_t input_size = read_circuit.get_init_input_size();
-  for (int64_t i = 0; i < (int64_t) read_circuit.gate_size; i++) {
-    read_circuit.task_schedule[i] = core[0][i];
-    ts[i] = core[0][i] + input_size + read_circuit.dff_size;
-  }
-
-  vector<int64_t> ts_1(
-      input_size + read_circuit.dff_size + read_circuit.gate_size);
-
-  for (int64_t i = 0; i < input_size + (int64_t) read_circuit.dff_size; i++) {
-    ts_1[i] = i;
-  }
-
-  for (int64_t i = 0; i < (int64_t) read_circuit.gate_size; i++) {
-    ts_1[ts[i]] = i + input_size + read_circuit.dff_size;
-  }
-  for (int64_t i = 0; i < (int64_t) read_circuit.dff_size; i++) {
-    if (read_circuit.dff_list[i].input[0] > 0) {  // Constant values are negative
-      read_circuit.dff_list[i].input[0] =
-          ts_1[read_circuit.dff_list[i].input[0]];
-    }
-    if (read_circuit.dff_list[i].input[1] > 0) {  // Constant values are negative
-      read_circuit.dff_list[i].input[1] =
-          ts_1[read_circuit.dff_list[i].input[1]];
-    }
-    read_circuit.dff_list[i].output = ts_1[read_circuit.dff_list[i].output];
-  }
-  for (int64_t i = 0; i < (int64_t) read_circuit.gate_size; i++) {
-    if (read_circuit.gate_list[i].input[0] > 0) {  // Constant values are negative
-      read_circuit.gate_list[i].input[0] =
-          ts_1[read_circuit.gate_list[i].input[0]];
-    }
-    if (read_circuit.gate_list[i].input[1] > 0) {  // Constant values are negative
-      read_circuit.gate_list[i].input[1] =
-          ts_1[read_circuit.gate_list[i].input[1]];
-    }
-    read_circuit.gate_list[i].output = ts_1[i + input_size
-        + read_circuit.dff_size];
-  }
-  for (int64_t i = 0; i < (int64_t) read_circuit.output_size; i++) {
-    read_circuit.output_list[i] = ts_1[read_circuit.output_list[i]];
-  }
-
-  LOG(INFO) << endl << "Topological Sort" << endl;
-  LOG(INFO) << "dffs:\tD\tI\tQ" << endl;
-  for (int64_t i = 0; i < (int64_t) read_circuit.dff_size; i++) {
-    LOG(INFO) << i << "\t" << Type2StrGate(read_circuit.dff_list[i].type)
-        << "\t" << read_circuit.dff_list[i].input[0] << "\t"
-        << read_circuit.dff_list[i].input[1] << "\t"
-        << read_circuit.dff_list[i].output << endl;
-  }
-  LOG(INFO) << endl;
-
-  LOG(INFO) << "gates:\tI0\tI1\tO" << endl;
-  for (int64_t i = 0; i < (int64_t) read_circuit.gate_size; i++) {
-    int64_t gid = read_circuit.task_schedule[i];
-    LOG(INFO) << i << "\t" << Type2StrGate(read_circuit.gate_list[gid].type)
-        << "\t" << read_circuit.gate_list[gid].input[0] << "\t"
-        << read_circuit.gate_list[gid].input[1] << "\t"
-        << read_circuit.gate_list[gid].output << endl;
-  }
-  LOG(INFO) << endl;
-
-  LOG(INFO) << "outputs:" << endl;
-  for (int64_t i = 0; i < (int64_t) read_circuit.output_size; i++) {
-    LOG(INFO) << read_circuit.output_list[i] << endl;
-  }
-  LOG(INFO) << endl;
-  delete[] core[0];
-  delete[] core;
-  return 0;
-}
 ///////////////////////////////////
-
 enum Mark {
   UnMarked = 0,
   TempMarked = 1,  // Temporary mark
@@ -435,6 +134,122 @@ int TopologicalSort(const ReadCircuit &read_circuit,
   return SUCCESS;
 }
 
+#ifdef HW_ACLRTR
+int Reorder(const ReadCircuit &read_circuit, vector<int64_t>* sorted_list, vector<int64_t>* reordered_list){
+	
+	int64_t init_input_size = read_circuit.get_init_input_size();
+	int64_t init_input_dff_size = init_input_size + read_circuit.dff_size;
+	
+	//first check current completion time
+	vector<uint64_t> marks(init_input_dff_size + read_circuit.gate_size, 0);
+	for (int64_t i = 0; i < init_input_dff_size; i++) {
+		marks[i] = NONXORDELAY;
+	}
+	
+	int64_t sorted_index, input0_index, input1_index;
+	short type;
+	bool XOR_placed, nonXOR_placed;
+	uint64_t placed = 0;
+	uint64_t cycles = 0;
+	
+	while (true) {
+		cycles++;	
+		XOR_placed = false;
+		nonXOR_placed = false;
+		
+		for (uint64_t i = 0; i < init_input_dff_size + read_circuit.gate_size; i++) {
+			if(marks[i]) marks[i]++;
+		}
+		
+		if (placed == read_circuit.gate_size) {// Everything is placed.
+			auto marks_ = min_element(marks.begin(), marks.end());
+			if(marks_[0] >= NONXORDELAY) break;
+		}
+		else{			
+			for (uint64_t j = 0; j < 2; j++){
+				sorted_index = sorted_list->at(init_input_dff_size + placed);			
+				input0_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[0];
+				input1_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[1];
+				type = read_circuit.gate_list[sorted_index - init_input_dff_size].type;
+				
+				if(((input0_index < 0)||(marks[input0_index] >= NONXORDELAY)) && ((input1_index < 0)||(marks[input1_index] >= NONXORDELAY))){
+					if((XOR_placed == false)&&((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE))){
+						placed++;
+						marks[sorted_index] = NONXORDELAY;					
+						XOR_placed = true;
+						if (placed == read_circuit.gate_size) break;
+					}
+					else if(nonXOR_placed == false){
+						placed++;
+						marks[sorted_index] = 1;				
+						nonXOR_placed = true;
+						if (placed == read_circuit.gate_size) break;
+					}
+				}
+			}
+		}
+	}
+	
+	uint64_t cycles_before = cycles;
+	
+	//now reorder
+	memset(&marks[0], 0, marks.size() * sizeof marks[0]);
+	reordered_list->clear();
+	
+	for (int64_t i = 0; i < init_input_dff_size; i++) {
+		marks[i] = NONXORDELAY;
+		reordered_list->push_back(i);
+	}
+	
+	cycles = 0;
+	while (true) {
+		cycles++;	
+		XOR_placed = false;
+		nonXOR_placed = false;
+		
+		for (uint64_t i = 0; i < init_input_dff_size + read_circuit.gate_size; i++) {
+			if(marks[i]) marks[i]++;
+		}
+		
+		if (reordered_list->size() == init_input_dff_size + read_circuit.gate_size) {// Everything is sorted.
+			auto marks_ = min_element(marks.begin(), marks.end());
+			if(marks_[0] >= NONXORDELAY) break;
+		}		
+		else{			
+			for (uint64_t i = 0; i < read_circuit.gate_size; i++) {
+				sorted_index = sorted_list->at(init_input_dff_size + i);			 
+				if(marks[sorted_index] >= 1) continue;
+				
+				input0_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[0];
+				input1_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[1];
+				type = read_circuit.gate_list[sorted_index - init_input_dff_size].type;
+				
+				if(((input0_index < 0)||(marks[input0_index] >= NONXORDELAY)) && ((input1_index < 0)||(marks[input1_index] >= NONXORDELAY))){
+					if((XOR_placed == false)&&((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE))){
+						reordered_list->push_back(sorted_index);
+						marks[sorted_index] = NONXORDELAY;					
+						XOR_placed = true;
+					}
+					else if(nonXOR_placed == false){
+						reordered_list->push_back(sorted_index);
+						marks[sorted_index] = 1;				
+						nonXOR_placed = true;
+					}
+				}
+				if(XOR_placed & nonXOR_placed) break;
+			}
+		}			
+	}
+	
+	uint64_t cycles_after = cycles;
+	
+	LOG(INFO) << "Completion time: before reordering " << cycles_before 
+				<< ", after reordering " << cycles_after << ". Improvement: " << (double)cycles_before/(double)cycles_after << endl;
+
+	return SUCCESS; 	
+}
+#endif
+
 int SortNetlist(ReadCircuit *read_circuit,
                 const ReadCircuitString& read_circuit_string) {
 
@@ -444,6 +259,13 @@ int SortNetlist(ReadCircuit *read_circuit,
   vector<int64_t> sorted_list;
   if (TopologicalSort(*read_circuit, &sorted_list, read_circuit_string) == FAILURE)
     return FAILURE;
+
+#ifdef HW_ACLRTR
+	vector<int64_t> reordered_list;
+	if (Reorder(*read_circuit, &sorted_list, &reordered_list) == FAILURE)
+		return FAILURE;	
+	sorted_list = reordered_list;
+#endif
 
   vector<int64_t> sorted_list_1(sorted_list.size());  //reverse sorted list
 

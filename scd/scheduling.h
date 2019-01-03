@@ -19,6 +19,8 @@
 #ifndef SCD_SCHEDULING_H_
 #define SCD_SCHEDULING_H_
 
+#define NONXORDELAY 10
+
 #include "scd/v_2_scd.h"
 
 int SortNetlist(ReadCircuit* read_circuit,
