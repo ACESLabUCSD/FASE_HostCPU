@@ -135,7 +135,7 @@ int TopologicalSort(const ReadCircuit &read_circuit,
 }
 
 #ifdef HW_ACLRTR
-int Reorder(const ReadCircuit &read_circuit, vector<int64_t>* sorted_list, vector<int64_t>* reordered_list){
+int Reorder(const ReadCircuit &read_circuit, vector<int64_t>* sorted_list, vector<int64_t>* reordered_list, uint64_t pipe_stg){
 	
 	int64_t init_input_size = read_circuit.get_init_input_size();
 	int64_t init_input_dff_size = init_input_size + read_circuit.dff_size;
@@ -143,7 +143,7 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t>* sorted_list, vecto
 	//first check current completion time
 	vector<uint64_t> marks(init_input_dff_size + read_circuit.gate_size, 0);
 	for (int64_t i = 0; i < init_input_dff_size; i++) {
-		marks[i] = NONXORDELAY;
+		marks[i] = pipe_stg;
 	}
 	
 	int64_t sorted_index, input0_index, input1_index;
@@ -163,7 +163,7 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t>* sorted_list, vecto
 		
 		if (placed == read_circuit.gate_size) {// Everything is placed.
 			auto marks_ = min_element(marks.begin(), marks.end());
-			if(marks_[0] >= NONXORDELAY) break;
+			if(marks_[0] >= pipe_stg) break;
 		}
 		else{			
 			for (uint64_t j = 0; j < 2; j++){
@@ -172,10 +172,10 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t>* sorted_list, vecto
 				input1_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[1];
 				type = read_circuit.gate_list[sorted_index - init_input_dff_size].type;
 				
-				if(((input0_index < 0)||(marks[input0_index] >= NONXORDELAY)) && ((input1_index < 0)||(marks[input1_index] >= NONXORDELAY))){
+				if(((input0_index < 0)||(marks[input0_index] >= pipe_stg)) && ((input1_index < 0)||(marks[input1_index] >= pipe_stg))){
 					if((XOR_placed == false)&&((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE))){
 						placed++;
-						marks[sorted_index] = NONXORDELAY;					
+						marks[sorted_index] = pipe_stg;					
 						XOR_placed = true;
 						if (placed == read_circuit.gate_size) break;
 					}
@@ -197,7 +197,7 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t>* sorted_list, vecto
 	reordered_list->clear();
 	
 	for (int64_t i = 0; i < init_input_dff_size; i++) {
-		marks[i] = NONXORDELAY;
+		marks[i] = pipe_stg;
 		reordered_list->push_back(i);
 	}
 	
@@ -213,7 +213,7 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t>* sorted_list, vecto
 		
 		if (reordered_list->size() == init_input_dff_size + read_circuit.gate_size) {// Everything is sorted.
 			auto marks_ = min_element(marks.begin(), marks.end());
-			if(marks_[0] >= NONXORDELAY) break;
+			if(marks_[0] >= pipe_stg) break;
 		}		
 		else{			
 			for (uint64_t i = 0; i < read_circuit.gate_size; i++) {
@@ -224,10 +224,10 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t>* sorted_list, vecto
 				input1_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[1];
 				type = read_circuit.gate_list[sorted_index - init_input_dff_size].type;
 				
-				if(((input0_index < 0)||(marks[input0_index] >= NONXORDELAY)) && ((input1_index < 0)||(marks[input1_index] >= NONXORDELAY))){
+				if(((input0_index < 0)||(marks[input0_index] >= pipe_stg)) && ((input1_index < 0)||(marks[input1_index] >= pipe_stg))){
 					if((XOR_placed == false)&&((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE))){
 						reordered_list->push_back(sorted_index);
-						marks[sorted_index] = NONXORDELAY;					
+						marks[sorted_index] = pipe_stg;					
 						XOR_placed = true;
 					}
 					else if(nonXOR_placed == false){
@@ -251,7 +251,11 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t>* sorted_list, vecto
 #endif
 
 int SortNetlist(ReadCircuit *read_circuit,
-                const ReadCircuitString& read_circuit_string) {
+                const ReadCircuitString& read_circuit_string
+#ifdef HW_ACLRTR
+			  , uint64_t pipe_stg
+#endif
+) {
 
   int64_t init_input_size = read_circuit->get_init_input_size();
   int64_t init_input_dff_size = init_input_size + read_circuit->dff_size;
@@ -261,10 +265,12 @@ int SortNetlist(ReadCircuit *read_circuit,
     return FAILURE;
 
 #ifdef HW_ACLRTR
-	vector<int64_t> reordered_list;
-	if (Reorder(*read_circuit, &sorted_list, &reordered_list) == FAILURE)
-		return FAILURE;	
-	sorted_list = reordered_list;
+	if(pipe_stg > 1){
+		vector<int64_t> reordered_list;
+		if (Reorder(*read_circuit, &sorted_list, &reordered_list, pipe_stg) == FAILURE)
+			return FAILURE;	
+		sorted_list = reordered_list;
+	}
 #endif
 
   vector<int64_t> sorted_list_1(sorted_list.size());  //reverse sorted list

@@ -37,7 +37,11 @@ int main(int argc, char** argv) {
   LogInitial(argc, argv);
 
   string input_netlist_file, brist_input_netlist_file;
-  string output_scd_file, output_hscd_file;
+  string output_scd_file;
+#ifdef HW_ACLRTR 
+  string output_hscd_file;
+  uint64_t pipe_stg;
+#endif
 
   boost::format fmter(
       "Verilog to SCD, TinyGarble version %1%.%2%.%3%.\nAllowed options");
@@ -53,8 +57,13 @@ int main(int argc, char** argv) {
    "www.cs.bris.ac.uk/Research/CryptographySecurity/MPC/).")  //
   ("scd,o", po::value<string>(&output_scd_file),
    "Output simple circuit description (scd) file address.")  //
+#ifdef HW_ACLRTR 
   ("hscd,w", po::value<string>(&output_hscd_file),
-   "Output hardware simple circuit description (hscd) file address.");
+   "Output hardware simple circuit description (hscd) file address.")
+  ("pipe_stg,p", po::value<uint64_t>(&pipe_stg)->default_value(NONXORDELAY),
+   "Number of pipelined stages for non-XOR gates.")
+#endif   
+   ;
 
   po::variables_map vm;
   try {
@@ -93,12 +102,14 @@ int main(int argc, char** argv) {
 #endif
 
   if (!input_netlist_file.empty()) {
-    LOG(INFO) << "V2SCD " << input_netlist_file << " to " << output_scd_file
-              << endl;
+    LOG(INFO) << "V2SCD " << input_netlist_file << " to " << output_scd_file << endl; 
+#ifdef HW_ACLRTR
+	if(hscd) LOG(INFO) << "V2SCD " << input_netlist_file << " to " << output_hscd_file << endl; 
+#endif
     if (Verilog2SCD(input_netlist_file, out_mapping_filename,
                     output_scd_file
 #ifdef HW_ACLRTR
-					, hscd, output_hscd_file
+					, hscd, output_hscd_file, pipe_stg
 #endif	
 					) == FAILURE) {
       LOG(ERROR) << "Verilog to SCD failed." << endl;

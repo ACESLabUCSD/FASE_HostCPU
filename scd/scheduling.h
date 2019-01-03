@@ -24,7 +24,11 @@
 #include "scd/v_2_scd.h"
 
 int SortNetlist(ReadCircuit* read_circuit,
-                const ReadCircuitString& read_circuit_string);
+                const ReadCircuitString& read_circuit_string
+#ifdef HW_ACLRTR
+			  , uint64_t pipe_stg = 1
+#endif
+	);
 int WriteMapping(const ReadCircuitString& read_circuit_string,
                  const ReadCircuit &read_circuit,
                  const string& out_mapping_filename);

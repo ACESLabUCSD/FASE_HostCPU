@@ -30,7 +30,7 @@ using std::endl;
 int Verilog2SCD(const string &in_file_name, const string& out_mapping_filename,
                 const string &out_file_name
 #ifdef HW_ACLRTR
-			  , bool hscd, const string &output_hscd_file
+			  , bool hscd, const string &output_hscd_file, uint64_t pipe_stg
 #endif				
 				) {
 
@@ -45,7 +45,11 @@ int Verilog2SCD(const string &in_file_name, const string& out_mapping_filename,
     LOG(ERROR) << "id assignment to netlist components failed." << endl;
     return FAILURE;
   }
-  if (SortNetlist(&read_circuit, read_circuit_string) == FAILURE) {
+  if (SortNetlist(&read_circuit, read_circuit_string
+#ifdef HW_ACLRTR
+			  , pipe_stg
+#endif	  
+  ) == FAILURE) {
     LOG(ERROR) << "topological sort failed." << endl;
     return FAILURE;
   }
