@@ -148,7 +148,7 @@ MU_TEST(Mux8Bit) {
   bool low_mem_foot = false;
 #ifdef HW_ACLRTR					
   bool aclrtr = false;
-  string acc_file_address = string(TINYGARBLE_SOURCE_DIR) + "/hw_aclrtr";
+  string acc_file_address = string(TINYGARBLE_BINARY_DIR) + "/scd/hw_aclrtr/mux_8bit_1cc/";
 #endif
   for (int i = 0; i < TEST_REPEAT; i++) {
     uint8_t x[2];
@@ -210,7 +210,7 @@ MU_TEST(Sum1Bit) {
   bool low_mem_foot = false;
 #ifdef HW_ACLRTR					
   bool aclrtr = false;
-  string acc_file_address = string(TINYGARBLE_SOURCE_DIR) + "/hw_aclrtr";
+  string acc_file_address = string(TINYGARBLE_BINARY_DIR) + "/scd/hw_aclrtr/sum_nbit_ncc/";
 #endif
   for (int i = 0; i < TEST_REPEAT; i++) {
     uint8_t x[2];
@@ -272,7 +272,7 @@ MU_TEST(Sum8Bit) {
   bool low_mem_foot = false;
 #ifdef HW_ACLRTR					
   bool aclrtr = false;
-  string acc_file_address = string(TINYGARBLE_SOURCE_DIR) + "/hw_aclrtr";
+  string acc_file_address = string(TINYGARBLE_BINARY_DIR) + "/scd/hw_aclrtr/sum_8bit_1cc/";
 #endif
   for (int i = 0; i < TEST_REPEAT; i++) {
     uint8_t x[2];
@@ -331,7 +331,7 @@ MU_TEST(Hamming32Bit1cc) {
   bool low_mem_foot = false;
 #ifdef HW_ACLRTR					
   bool aclrtr = false;
-  string acc_file_address = string(TINYGARBLE_SOURCE_DIR) + "/hw_aclrtr";
+  string acc_file_address = string(TINYGARBLE_BINARY_DIR) + "/scd/hw_aclrtr/hamming_32bit_1cc";
 #endif
   for (int i = 0; i < TEST_REPEAT; i++) {
     uint32_t x[2];
@@ -392,7 +392,7 @@ MU_TEST(Hamming32Bit8cc) {
   bool low_mem_foot = false;
 #ifdef HW_ACLRTR					
   bool aclrtr = false;
-  string acc_file_address = string(TINYGARBLE_SOURCE_DIR) + "/hw_aclrtr";
+  string acc_file_address = string(TINYGARBLE_BINARY_DIR) + "/scd/hw_aclrtr/hamming_32bit_8cc/";
 #endif
   for (int i = 0; i < TEST_REPEAT; i++) {
     uint32_t x[2];
@@ -454,7 +454,7 @@ MU_TEST(Hamming32Bit8ccDisabledOT) {
   bool low_mem_foot = false;
 #ifdef HW_ACLRTR					
   bool aclrtr = false;
-  string acc_file_address = string(TINYGARBLE_SOURCE_DIR) + "/hw_aclrtr";
+  string acc_file_address = string(TINYGARBLE_BINARY_DIR) + "/scd/hw_aclrtr/hamming_32bit_8cc/";
 #endif
   for (int i = 0; i < TEST_REPEAT; i++) {
     uint32_t x[2];
@@ -516,7 +516,7 @@ MU_TEST(Hamming32Bit8ccWithMask) {
   bool low_mem_foot = false;
 #ifdef HW_ACLRTR					
   bool aclrtr = false;
-  string acc_file_address = string(TINYGARBLE_SOURCE_DIR) + "/hw_aclrtr";
+  string acc_file_address = string(TINYGARBLE_BINARY_DIR) + "/scd/hw_aclrtr/hamming_32bit_8cc/";
 #endif
   for (int i = 0; i < TEST_REPEAT; i++) {
     uint32_t x[2];
@@ -584,7 +584,7 @@ MU_TEST(Hamming32Bit8ccDisabledOTLowMem) {
   bool low_mem_foot = true;
 #ifdef HW_ACLRTR					
   bool aclrtr = false;
-  string acc_file_address = string(TINYGARBLE_SOURCE_DIR) + "/hw_aclrtr";
+  string acc_file_address = string(TINYGARBLE_BINARY_DIR) + "/scd/hw_aclrtr/hamming_32bit_8cc/";
 #endif
   for (int i = 0; i < TEST_REPEAT; i++) {
     uint32_t x[2];
@@ -647,7 +647,7 @@ MU_TEST(Hamming32Bit8ccLowMem) {
   bool low_mem_foot = true;
 #ifdef HW_ACLRTR					
   bool aclrtr = false;
-  string acc_file_address = string(TINYGARBLE_SOURCE_DIR) + "/hw_aclrtr";
+  string acc_file_address = string(TINYGARBLE_BINARY_DIR) + "/scd/hw_aclrtr/hamming_32bit_8cc";
 #endif
   for (int i = 0; i < TEST_REPEAT; i++) {
     uint32_t x[2];
