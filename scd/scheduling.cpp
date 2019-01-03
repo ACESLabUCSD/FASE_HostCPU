@@ -140,7 +140,8 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t>* sorted_list, vecto
 	int64_t init_input_size = read_circuit.get_init_input_size();
 	int64_t init_input_dff_size = init_input_size + read_circuit.dff_size;
 	
-	//first check current completion time
+	/*first check current completion time*/
+	
 	vector<uint64_t> marks(init_input_dff_size + read_circuit.gate_size, 0);
 	for (int64_t i = 0; i < init_input_dff_size; i++) {
 		marks[i] = pipe_stg;
@@ -175,12 +176,14 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t>* sorted_list, vecto
 				if(((input0_index < 0)||(marks[input0_index] >= pipe_stg)) && ((input1_index < 0)||(marks[input1_index] >= pipe_stg))){
 					if((XOR_placed == false)&&((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE))){
 						placed++;
+						cycles++;
 						marks[sorted_index] = pipe_stg;					
 						XOR_placed = true;
 						if (placed == read_circuit.gate_size) break;
 					}
 					else if(nonXOR_placed == false){
 						placed++;
+						cycles++;
 						marks[sorted_index] = 1;				
 						nonXOR_placed = true;
 						if (placed == read_circuit.gate_size) break;
@@ -192,7 +195,7 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t>* sorted_list, vecto
 	
 	uint64_t cycles_before = cycles;
 	
-	//now reorder
+	/*now reorder*/
 	memset(&marks[0], 0, marks.size() * sizeof marks[0]);
 	reordered_list->clear();
 	
@@ -227,11 +230,13 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t>* sorted_list, vecto
 				if(((input0_index < 0)||(marks[input0_index] >= pipe_stg)) && ((input1_index < 0)||(marks[input1_index] >= pipe_stg))){
 					if((XOR_placed == false)&&((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE))){
 						reordered_list->push_back(sorted_index);
+						cycles++;
 						marks[sorted_index] = pipe_stg;					
 						XOR_placed = true;
 					}
 					else if(nonXOR_placed == false){
 						reordered_list->push_back(sorted_index);
+						cycles++;
 						marks[sorted_index] = 1;				
 						nonXOR_placed = true;
 					}
@@ -243,8 +248,19 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t>* sorted_list, vecto
 	
 	uint64_t cycles_after = cycles;
 	
-	LOG(INFO) << "Completion time: before reordering " << cycles_before 
-				<< ", after reordering " << cycles_after << ". Improvement: " << (double)cycles_before/(double)cycles_after << endl;
+	LOG(INFO)	<< cycles_before << "\t"  
+				<< cycles_after << "\t" 
+				<< (double)cycles_before/(double)cycles_after << "\t"
+				<< (double)(cycles_before - read_circuit.gate_size)/cycles_before*100 << "%\t"
+				<< (double)(cycles_after - read_circuit.gate_size)/cycles_after*100 << "%\t" 
+				<< (((double)(cycles_before - read_circuit.gate_size)/cycles_before)-((double)(cycles_after - read_circuit.gate_size)/cycles_after))*100 << "%" << endl;
+	
+	/*LOG(INFO)	<< "Completion time:\tbefore reordering " << cycles_before 
+				<< ",\tafter reordering " << cycles_after 
+				<< ".\tImprovement: " << (double)cycles_before/(double)cycles_after << endl;
+	LOG(INFO) 	<< "Empty cycles:\t\tbefore reordering " << (double)(cycles_before - read_circuit.gate_size)/cycles_before*100
+				<< "%,\tafter reordering " << (double)(cycles_after - read_circuit.gate_size)/cycles_after*100 << "%" 
+				<< ".\tImprovement: " << (((double)(cycles_before - read_circuit.gate_size)/cycles_before)-((double)(cycles_after - read_circuit.gate_size)/cycles_after))*100 << "%" << endl;*/
 
 	return SUCCESS; 	
 }
