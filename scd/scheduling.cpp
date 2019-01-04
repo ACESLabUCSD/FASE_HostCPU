@@ -14,6 +14,58 @@
  You should have received a copy of the GNU General Public License
  along with TinyGarble.  If not, see <http://www.gnu.org/licenses/>.
  */
+ 
+ /*
+ vector<bool> b_wires_in(init_input_dff_size + read_circuit.gate_size, false);
+	vector<bool> b_wires_out(init_input_dff_size + read_circuit.gate_size, false);	
+	vector<uint64_t> Layers(init_input_dff_size + read_circuit.gate_size, init_input_dff_size + read_circuit.gate_size);
+	
+	for (uint64_t i = 0; i < init_input_dff_size; i++) {
+		b_wires_in[i] = true;
+		b_wires_out[i] = true;
+		Layers[i] = 0;
+	}	
+	
+	for (uint64_t i = 0; i < read_circuit.gate_size; i++) 
+			cout << sorted_list->at(init_input_dff_size + i) << " ";
+		cout << endl;
+	
+	uint64_t layer = 0;
+	while(true){
+		layer++;
+		bool end_reached = true;
+		for (uint64_t i = 0; i < read_circuit.output_size; i++) { 
+			if(b_wires_out[read_circuit.output_list[i]] == false) {
+				end_reached = false;
+				break;
+			}
+		}
+		if(end_reached) break;
+		
+		for (uint64_t i = 0; i < read_circuit.gate_size; i++) {
+			sorted_index = sorted_list->at(init_input_dff_size + i);					
+			input0_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[0];
+			input1_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[1];
+			if(((input0_index < 0)||(b_wires_in[input0_index])) && ((input1_index < 0)||(b_wires_in[input1_index]))) b_wires_out[sorted_index] = true;			
+		}
+		
+		for (uint64_t i = 0; i < read_circuit.gate_size; i++) {
+			sorted_index = sorted_list->at(init_input_dff_size + i);
+			cout << b_wires_out[sorted_index] << " ";
+			if((b_wires_out[sorted_index] == true)&&(Layers[sorted_index] > layer)) Layers[sorted_index] = layer;
+		}
+		cout << endl;
+		
+		b_wires_in = b_wires_out;
+	}
+	
+	uint64_t CP = layer;
+		
+	for (uint64_t i = 0; i < read_circuit.gate_size; i++) {
+		sorted_index = sorted_list->at(init_input_dff_size + i);
+		cout << Layers[sorted_index] << " ";
+	}
+ */
 
 #include "scd/scheduling.h"
 
@@ -135,16 +187,39 @@ int TopologicalSort(const ReadCircuit &read_circuit,
 }
 
 #ifdef HW_ACLRTR
-int Reorder(const ReadCircuit &read_circuit, vector<int64_t>* sorted_list, vector<int64_t>* reordered_list, uint64_t pipe_stg){
+
+#define MIN(a,b) ((a)<(b)?(a):(b))
+#define MAX(a,b) ((a)>(b)?(a):(b))
+
+vector<uint64_t> SortByPriority(vector<uint64_t> v) {
+
+  // initialize original index locations
+  vector<uint64_t> idx(v.size());
+  iota(idx.begin(), idx.end(), 0);
+
+  // sort indexes based on comparing values in v
+  sort(idx.begin(), idx.end(),
+       [&v](uint64_t i1, uint64_t i2) {return v[i1] < v[i2];});
+
+  return idx;
+}
+
+
+int64_t nodeWeight(short type, uint64_t pipe_stg){
+	if((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE)) return 1;
+	else return pipe_stg;
+}
+
+int ComputeCycles(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, uint64_t pipe_stg){
 	
 	int64_t init_input_size = read_circuit.get_init_input_size();
 	int64_t init_input_dff_size = init_input_size + read_circuit.dff_size;
 	
 	/*first check current completion time*/
 	
-	vector<uint64_t> marks(init_input_dff_size + read_circuit.gate_size, 0);
+	vector<uint64_t> wires(init_input_dff_size + read_circuit.gate_size, 0);
 	for (int64_t i = 0; i < init_input_dff_size; i++) {
-		marks[i] = pipe_stg;
+		wires[i] = pipe_stg;
 	}
 	
 	int64_t sorted_index, input0_index, input1_index;
@@ -159,32 +234,32 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t>* sorted_list, vecto
 		nonXOR_placed = false;
 		
 		for (uint64_t i = 0; i < init_input_dff_size + read_circuit.gate_size; i++) {
-			if(marks[i]) marks[i]++;
+			if(wires[i]) wires[i]++;
 		}
 		
 		if (placed == read_circuit.gate_size) {// Everything is placed.
-			auto marks_ = min_element(marks.begin(), marks.end());
-			if(marks_[0] >= pipe_stg) break;
+			auto wires_ = min_element(wires.begin(), wires.end());
+			if(wires_[0] >= pipe_stg) break;
 		}
 		else{			
-			for (uint64_t j = 0; j < 2; j++){
-				sorted_index = sorted_list->at(init_input_dff_size + placed);			
+			for (uint64_t i = 0; i < 2; i++){
+				sorted_index = /*sorted_list->at(init_input_dff_size + placed)*/sorted_list[init_input_dff_size + placed];			
 				input0_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[0];
 				input1_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[1];
 				type = read_circuit.gate_list[sorted_index - init_input_dff_size].type;
 				
-				if(((input0_index < 0)||(marks[input0_index] >= pipe_stg)) && ((input1_index < 0)||(marks[input1_index] >= pipe_stg))){
+				if(((input0_index < 0)||(wires[input0_index] >= pipe_stg)) && ((input1_index < 0)||(wires[input1_index] >= pipe_stg))){
 					if((XOR_placed == false)&&((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE))){
 						placed++;
 						cycles++;
-						marks[sorted_index] = pipe_stg;					
+						wires[sorted_index] = pipe_stg;					
 						XOR_placed = true;
 						if (placed == read_circuit.gate_size) break;
 					}
 					else if(nonXOR_placed == false){
 						placed++;
 						cycles++;
-						marks[sorted_index] = 1;				
+						wires[sorted_index] = 1;				
 						nonXOR_placed = true;
 						if (placed == read_circuit.gate_size) break;
 					}
@@ -193,51 +268,129 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t>* sorted_list, vecto
 		}
 	}
 	
-	uint64_t cycles_before = cycles;
+	return cycles;	
+}
+
+vector<uint64_t> ComputeTLevels(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, uint64_t pipe_stg, bool bigT){
 	
-	/*now reorder*/
-	memset(&marks[0], 0, marks.size() * sizeof marks[0]);
-	reordered_list->clear();
+	int64_t init_input_size = read_circuit.get_init_input_size();
+	int64_t init_input_dff_size = init_input_size + read_circuit.dff_size;
+	
+	int64_t sorted_index, input0_index, input1_index;
+	short type;
+	
+	vector<uint64_t> t_level(init_input_dff_size + read_circuit.gate_size, init_input_dff_size + read_circuit.gate_size);
+	vector<uint64_t> t_level_nxt(init_input_dff_size + read_circuit.gate_size, init_input_dff_size + read_circuit.gate_size);
+	vector<uint64_t> T_level(init_input_dff_size + read_circuit.gate_size, init_input_dff_size + read_circuit.gate_size);
+	vector<uint64_t> T_level_nxt(init_input_dff_size + read_circuit.gate_size, init_input_dff_size + read_circuit.gate_size);
+	
+	for (uint64_t i = 0; i < init_input_dff_size; i++) {
+		t_level[i] = 0;
+		t_level_nxt[i] = 0;
+		T_level[i] = 0;
+		T_level_nxt[i] = 0;
+	}	
+	
+	for (uint64_t i = 0; i < read_circuit.gate_size; i++) {
+			sorted_index = sorted_list[init_input_dff_size + i];					
+			input0_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[0];
+			input1_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[1];
+			type = read_circuit.gate_list[sorted_index - init_input_dff_size].type;
+			
+			if(input0_index < 0) t_level[sorted_index] = t_level_nxt[input1_index];
+			else if (input1_index < 0) t_level[sorted_index] = t_level_nxt[input0_index];
+			else t_level[sorted_index] = MAX(t_level_nxt[input0_index], t_level_nxt[input1_index]);			
+			t_level_nxt[sorted_index] = t_level[sorted_index] + nodeWeight(type, pipe_stg);
+			
+			if(input0_index < 0) T_level[sorted_index] = T_level_nxt[input1_index];
+			else if (input1_index < 0) T_level[sorted_index] = T_level_nxt[input0_index];
+			else T_level[sorted_index] = T_level_nxt[input0_index] + T_level_nxt[input1_index];			
+			T_level_nxt[sorted_index] = T_level[sorted_index] + nodeWeight(type, pipe_stg);
+		}
+		
+	for (uint64_t i = 0; i < read_circuit.gate_size; i++) {// add 1 so that inputs and dffs are always in front
+		t_level[init_input_dff_size + i]++;
+		T_level[init_input_dff_size + i]++;
+	}
+	
+	if(bigT) return T_level;
+	else  return t_level;
+}
+
+
+int Reorder(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector<int64_t>* reordered_list, uint64_t pipe_stg){
+	
+	uint64_t cycles_before = ComputeCycles(read_circuit, sorted_list, pipe_stg);	
+		
+	vector<uint64_t> t_level = ComputeTLevels(read_circuit, sorted_list, pipe_stg, false);	
+	vector<uint64_t> sorted_by_t = SortByPriority(t_level);
+	
+	/*compute b-level*/
+	
+	/*vector<uint64_t> b_level(init_input_dff_size + read_circuit.gate_size, 0);
+	vector<uint64_t> b_level_nxt(init_input_dff_size + read_circuit.gate_size, 0);
+	vector<uint64_t> B_level(init_input_dff_size + read_circuit.gate_size, 0);
+	vector<uint64_t> B_level_nxt(init_input_dff_size + read_circuit.gate_size, 0);
+	
+	int64_t output_index;
+	
+	for (uint64_t i = 0; i < read_circuit.output_size; i++){
+		output_index = read_circuit.output_list[i];
+		type = read_circuit.gate_list[output_index - init_input_dff_size].type;	
+		input0_index = read_circuit.gate_list[output_index - init_input_dff_size].input[0];
+		input1_index = read_circuit.gate_list[output_index - init_input_dff_size].input[1];
+	}
+	cout << endl;*/
+	
+	/*then reorder*/
+	int64_t init_input_size = read_circuit.get_init_input_size();
+	int64_t init_input_dff_size = init_input_size + read_circuit.dff_size;
+	
+	int64_t sorted_index, input0_index, input1_index;
+	short type;
+	bool XOR_placed, nonXOR_placed;
+	
+	vector<uint64_t> wires(init_input_dff_size + read_circuit.gate_size, 0);
 	
 	for (int64_t i = 0; i < init_input_dff_size; i++) {
-		marks[i] = pipe_stg;
+		wires[i] = pipe_stg;
 		reordered_list->push_back(i);
 	}
 	
-	cycles = 0;
+	uint64_t cycles = 0;
 	while (true) {
 		cycles++;	
 		XOR_placed = false;
 		nonXOR_placed = false;
 		
 		for (uint64_t i = 0; i < init_input_dff_size + read_circuit.gate_size; i++) {
-			if(marks[i]) marks[i]++;
+			if(wires[i]) wires[i]++;
 		}
 		
 		if (reordered_list->size() == init_input_dff_size + read_circuit.gate_size) {// Everything is sorted.
-			auto marks_ = min_element(marks.begin(), marks.end());
-			if(marks_[0] >= pipe_stg) break;
+			auto wires_ = min_element(wires.begin(), wires.end());
+			if(wires_[0] >= pipe_stg) break;
 		}		
 		else{			
 			for (uint64_t i = 0; i < read_circuit.gate_size; i++) {
-				sorted_index = sorted_list->at(init_input_dff_size + i);			 
-				if(marks[sorted_index] >= 1) continue;
+				sorted_index = /*sorted_list->at(init_input_dff_size + i)*/sorted_by_t[init_input_dff_size + i];			 
+				if(wires[sorted_index] >= 1) continue;
 				
 				input0_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[0];
 				input1_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[1];
 				type = read_circuit.gate_list[sorted_index - init_input_dff_size].type;
 				
-				if(((input0_index < 0)||(marks[input0_index] >= pipe_stg)) && ((input1_index < 0)||(marks[input1_index] >= pipe_stg))){
+				if(((input0_index < 0)||(wires[input0_index] >= pipe_stg)) && ((input1_index < 0)||(wires[input1_index] >= pipe_stg))){
 					if((XOR_placed == false)&&((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE))){
 						reordered_list->push_back(sorted_index);
 						cycles++;
-						marks[sorted_index] = pipe_stg;					
+						wires[sorted_index] = pipe_stg;					
 						XOR_placed = true;
 					}
 					else if(nonXOR_placed == false){
 						reordered_list->push_back(sorted_index);
 						cycles++;
-						marks[sorted_index] = 1;				
+						wires[sorted_index] = 1;				
 						nonXOR_placed = true;
 					}
 				}
@@ -283,7 +436,7 @@ int SortNetlist(ReadCircuit *read_circuit,
 #ifdef HW_ACLRTR
 	if(pipe_stg > 1){
 		vector<int64_t> reordered_list;
-		if (Reorder(*read_circuit, &sorted_list, &reordered_list, pipe_stg) == FAILURE)
+		if (Reorder(*read_circuit, sorted_list, &reordered_list, pipe_stg) == FAILURE)
 			return FAILURE;	
 		sorted_list = reordered_list;
 	}
