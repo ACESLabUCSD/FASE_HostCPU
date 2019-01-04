@@ -243,7 +243,7 @@ int ComputeCycles(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, 
 		}
 		else{			
 			for (uint64_t i = 0; i < 2; i++){
-				sorted_index = /*sorted_list->at(init_input_dff_size + placed)*/sorted_list[init_input_dff_size + placed];			
+				sorted_index = sorted_list[init_input_dff_size + placed];			
 				input0_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[0];
 				input1_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[1];
 				type = read_circuit.gate_list[sorted_index - init_input_dff_size].type;
@@ -271,7 +271,7 @@ int ComputeCycles(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, 
 	return cycles;	
 }
 
-vector<uint64_t> ComputeTLevels(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, uint64_t pipe_stg, bool bigT){
+int ComputeTLevels(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector<uint64_t>& t_level, uint64_t pipe_stg, bool bigT){
 	
 	int64_t init_input_size = read_circuit.get_init_input_size();
 	int64_t init_input_dff_size = init_input_size + read_circuit.dff_size;
@@ -279,16 +279,12 @@ vector<uint64_t> ComputeTLevels(const ReadCircuit &read_circuit, vector<int64_t>
 	int64_t sorted_index, input0_index, input1_index;
 	short type;
 	
-	vector<uint64_t> t_level(init_input_dff_size + read_circuit.gate_size, init_input_dff_size + read_circuit.gate_size);
-	vector<uint64_t> t_level_nxt(init_input_dff_size + read_circuit.gate_size, init_input_dff_size + read_circuit.gate_size);
-	vector<uint64_t> T_level(init_input_dff_size + read_circuit.gate_size, init_input_dff_size + read_circuit.gate_size);
-	vector<uint64_t> T_level_nxt(init_input_dff_size + read_circuit.gate_size, init_input_dff_size + read_circuit.gate_size);
+	t_level.resize(init_input_dff_size + read_circuit.gate_size);
+	vector<uint64_t> t_level_nxt(init_input_dff_size + read_circuit.gate_size);
 	
 	for (uint64_t i = 0; i < init_input_dff_size; i++) {
 		t_level[i] = 0;
 		t_level_nxt[i] = 0;
-		T_level[i] = 0;
-		T_level_nxt[i] = 0;
 	}	
 	
 	for (uint64_t i = 0; i < read_circuit.gate_size; i++) {
@@ -296,25 +292,25 @@ vector<uint64_t> ComputeTLevels(const ReadCircuit &read_circuit, vector<int64_t>
 			input0_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[0];
 			input1_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[1];
 			type = read_circuit.gate_list[sorted_index - init_input_dff_size].type;
-			
-			if(input0_index < 0) t_level[sorted_index] = t_level_nxt[input1_index];
-			else if (input1_index < 0) t_level[sorted_index] = t_level_nxt[input0_index];
-			else t_level[sorted_index] = MAX(t_level_nxt[input0_index], t_level_nxt[input1_index]);			
-			t_level_nxt[sorted_index] = t_level[sorted_index] + nodeWeight(type, pipe_stg);
-			
-			if(input0_index < 0) T_level[sorted_index] = T_level_nxt[input1_index];
-			else if (input1_index < 0) T_level[sorted_index] = T_level_nxt[input0_index];
-			else T_level[sorted_index] = T_level_nxt[input0_index] + T_level_nxt[input1_index];			
-			T_level_nxt[sorted_index] = T_level[sorted_index] + nodeWeight(type, pipe_stg);
+			if(bigT){
+				if(input0_index < 0) t_level[sorted_index] = t_level_nxt[input1_index];
+				else if (input1_index < 0) t_level[sorted_index] = t_level_nxt[input0_index];
+				else t_level[sorted_index] = t_level_nxt[input0_index] + t_level_nxt[input1_index];			
+				t_level_nxt[sorted_index] = t_level[sorted_index] + nodeWeight(type, pipe_stg);
+			}
+			else{
+				if(input0_index < 0) t_level[sorted_index] = t_level_nxt[input1_index];
+				else if (input1_index < 0) t_level[sorted_index] = t_level_nxt[input0_index];
+				else t_level[sorted_index] = MAX(t_level_nxt[input0_index], t_level_nxt[input1_index]);			
+				t_level_nxt[sorted_index] = t_level[sorted_index] + nodeWeight(type, pipe_stg);
+			}
 		}
 		
 	for (uint64_t i = 0; i < read_circuit.gate_size; i++) {// add 1 so that inputs and dffs are always in front
 		t_level[init_input_dff_size + i]++;
-		T_level[init_input_dff_size + i]++;
 	}
 	
-	if(bigT) return T_level;
-	else  return t_level;
+	return SUCCESS;
 }
 
 
@@ -322,7 +318,8 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector
 	
 	uint64_t cycles_before = ComputeCycles(read_circuit, sorted_list, pipe_stg);	
 		
-	vector<uint64_t> t_level = ComputeTLevels(read_circuit, sorted_list, pipe_stg, false);	
+	vector<uint64_t> t_level;
+	ComputeTLevels(read_circuit, sorted_list, t_level, pipe_stg, false);	
 	vector<uint64_t> sorted_by_t = SortByPriority(t_level);
 	
 	/*compute b-level*/
