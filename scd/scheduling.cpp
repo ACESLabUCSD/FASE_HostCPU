@@ -224,8 +224,8 @@ vector<int64_t> SortByPriority(vector<double> v) {
 }*/
 
 double nodeWeight(short type, uint64_t pipe_stg){
-	double ret_val = 1;
-	if((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE)) return ret_val;
+	double ret_val = 1e-30;
+	if((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE)) return ret_val/pipe_stg;
 	else return ret_val;
 }
 
@@ -270,14 +270,14 @@ int ComputeCycles(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, 
 				if(((input0_index < 0)||(wires[input0_index] >= pipe_stg)) && ((input1_index < 0)||(wires[input1_index] >= pipe_stg))){
 					if((XOR_placed == false)&&((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE))){
 						placed++;
-						cycles++;
+						if(nonXOR_placed) cycles++;
 						wires[sorted_index] = pipe_stg;					
 						XOR_placed = true;
 						if (placed == read_circuit.gate_size) break;
 					}
 					else if(nonXOR_placed == false){
 						placed++;
-						cycles++;
+						if(XOR_placed) cycles++;
 						wires[sorted_index] = 1;				
 						nonXOR_placed = true;
 						if (placed == read_circuit.gate_size) break;
@@ -332,6 +332,7 @@ int ComputeTLevels(const ReadCircuit &read_circuit, vector<int64_t> sorted_list,
 	return SUCCESS;
 }
 
+#if 0
 int ComputeBLevelsRecur(const ReadCircuit& read_circuit, vector<double>& b_level, int64_t output_index, double prev_b_level, uint64_t pipe_stg, bool bigB){	
 	 
 	int64_t init_input_size = read_circuit.get_init_input_size();
@@ -382,14 +383,6 @@ int ComputeBLevels(const ReadCircuit &read_circuit, vector<int64_t> sorted_list,
 	
 	memset(&b_level[0], 0, b_level.size() * sizeof b_level[0]);
 	
-	for (uint64_t i = 0; i < read_circuit.gate_size; i++){
-		cout	<< i << " "
-				<< read_circuit.gate_list[i].output << " "
-				<< read_circuit.gate_list[i].input[0] << " "
-				<< read_circuit.gate_list[i].input[1] << " "
-				<< read_circuit.gate_list[i].type << endl;
-	}
-	
 	int64_t output_index;
 	
 	for (uint64_t i = 0; i < read_circuit.output_size; i++){
@@ -405,6 +398,99 @@ int ComputeBLevels(const ReadCircuit &read_circuit, vector<int64_t> sorted_list,
 	return SUCCESS;
 }
 
+int ComputeBLevels(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector<double>& b_level, uint64_t pipe_stg, bool bigB){
+	
+	int64_t init_input_size = read_circuit.get_init_input_size();
+	int64_t init_input_dff_size = init_input_size + read_circuit.dff_size;
+	
+	cout << "init_input_dff_size: " << init_input_dff_size << endl;
+	cout << "output size: " << read_circuit.output_size << endl;
+	
+	b_level.resize(init_input_dff_size + read_circuit.gate_size);	
+	memset(&b_level[0], 0, b_level.size() * sizeof b_level[0]);
+	
+	int64_t sorted_index, input0_index, input1_index;
+	short type;
+	
+	for (int64_t i = read_circuit.gate_size-1; i >= 0; i--){
+		sorted_index = sorted_list[init_input_dff_size + i];	
+		cout << sorted_index << "----------------------------------------------------" << endl;
+		type = read_circuit.gate_list[sorted_index - init_input_dff_size].type;
+		b_level[sorted_index] = nodeWeight(type, pipe_stg);
+		double preb_b_level = b_level[sorted_index];
+		for (int64_t j = read_circuit.gate_size-1; j >= 0; j--){
+			input0_index = read_circuit.gate_list[j].input[0];
+			input1_index = read_circuit.gate_list[j].input[1];
+			cout << read_circuit.gate_size << "\t"  << i << "\t" << j << "\t" << input0_index << " " << input1_index << endl;
+			if(sorted_index == input0_index){
+				if(bigB) b_level[sorted_index] += b_level[init_input_dff_size + j];
+				else{
+					double new_b_level = preb_b_level + b_level[init_input_dff_size + j];
+					if(new_b_level > b_level[sorted_index]) b_level[sorted_index] = new_b_level;
+				}
+			}
+			if(sorted_index == input1_index){
+				if(bigB) b_level[sorted_index] += b_level[init_input_dff_size + j];
+				else{
+					double new_b_level = preb_b_level + b_level[init_input_dff_size + j];
+					if(new_b_level > b_level[sorted_index]) b_level[sorted_index] = new_b_level;
+				}
+			}
+		}
+	}	
+	
+	auto b_level_ = max_element(b_level.begin(), b_level.end());	
+	for (uint64_t i = 0; i < init_input_dff_size; i++) {
+		b_level[i] = b_level_[0]+1;
+	}	
+	
+	return SUCCESS;
+}
+#endif
+
+int ComputeBLevels(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector<double>& b_level, uint64_t pipe_stg, bool bigB){
+	
+	int64_t init_input_size = read_circuit.get_init_input_size();
+	int64_t init_input_dff_size = init_input_size + read_circuit.dff_size;
+	
+	cout << "init_input_dff_size: " << init_input_dff_size << endl;
+	cout << "output size: " << read_circuit.output_size << endl;
+	
+	b_level.resize(init_input_dff_size + read_circuit.gate_size);	
+	memset(&b_level[0], 0, b_level.size() * sizeof b_level[0]);
+	vector<double> b_level_prev(init_input_dff_size + read_circuit.gate_size, 0);
+	
+	int64_t sorted_index, input0_index, input1_index;
+	short type;
+	
+	for (int64_t i = read_circuit.gate_size-1; i >= 0; i--){
+		sorted_index = sorted_list[init_input_dff_size + i];	
+		input0_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[0];
+		input1_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[1];
+		cout << i << "\t" << sorted_index << "\t" << input0_index << " " << input1_index << endl;
+		type = read_circuit.gate_list[sorted_index - init_input_dff_size].type;
+		b_level[sorted_index] = nodeWeight(type, pipe_stg) + b_level_prev[sorted_index];
+		if(bigB){
+			if(input0_index > 0) 
+				b_level_prev[input0_index] += b_level[sorted_index];
+			if(input1_index > 0) 
+				b_level_prev[input1_index] += b_level[sorted_index];	
+		}		
+		else{
+			if(input0_index > 0) 
+				if(b_level_prev[input0_index] < b_level[sorted_index]) b_level_prev[input0_index] = b_level[sorted_index];
+			if(input1_index > 0) 
+				if(b_level_prev[input1_index] < b_level[sorted_index]) b_level_prev[input1_index] = b_level[sorted_index];	
+		}		
+	}	
+	
+	auto b_level_ = max_element(b_level.begin(), b_level.end());	
+	for (int64_t i = 0; i < init_input_dff_size; i++) {
+		b_level[i] = b_level_[0]+1;
+	}	
+	
+	return SUCCESS;
+}
 
 int Reorder(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector<int64_t>* reordered_list, uint64_t pipe_stg){
 	
@@ -422,7 +508,8 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector
 	vector<int64_t> sorted_by_t = SortByPriority(t_level);
 	
 	vector<double> b_level;
-	ComputeBLevels(read_circuit, sorted_list, b_level, pipe_stg, false);
+	ComputeBLevels(read_circuit, sorted_list, b_level, pipe_stg, true);
+	
 	double CP = b_level[0];
 	for (uint64_t i = 0; i < b_level.size(); i++)
 		b_level[i] = CP-b_level[i];
@@ -480,13 +567,13 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector
 				if(((input0_index < 0)||(wires[input0_index] >= pipe_stg)) && ((input1_index < 0)||(wires[input1_index] >= pipe_stg))){
 					if((XOR_placed == false)&&((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE))){
 						reordered_list->push_back(sorted_index);
-						cycles++;
+						if(nonXOR_placed) cycles++;
 						wires[sorted_index] = pipe_stg;					
 						XOR_placed = true;
 					}
 					else if(nonXOR_placed == false){
 						reordered_list->push_back(sorted_index);
-						cycles++;
+						if(XOR_placed) cycles++;
 						wires[sorted_index] = 1;				
 						nonXOR_placed = true;
 					}
@@ -522,7 +609,6 @@ int SortNetlist(ReadCircuit *read_circuit,
 			  , uint64_t pipe_stg
 #endif
 ) {
-
   int64_t init_input_size = read_circuit->get_init_input_size();
   int64_t init_input_dff_size = init_input_size + read_circuit->dff_size;
 
