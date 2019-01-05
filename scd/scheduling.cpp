@@ -171,14 +171,15 @@ int ComputeCycles(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, 
 	
 	int64_t sorted_index, input0_index, input1_index;
 	short type;
-	bool XOR_placed, nonXOR_placed;
 	uint64_t placed = 0;
+	
+	vector<bool> mem_busy(pipe_stg+1, false);	
 	uint64_t cycles = 0;
 	
 	while (true) {
 		cycles++;	
-		XOR_placed = false;
-		nonXOR_placed = false;
+		mem_busy.push_back(false);		
+		if(mem_busy[cycles-1]) continue;
 		
 		for (uint64_t i = 0; i < init_input_dff_size + read_circuit.gate_size; i++) {
 			if(wires[i]) wires[i]++;
@@ -189,27 +190,20 @@ int ComputeCycles(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, 
 			if(wires_[0] >= pipe_stg) break;
 		}
 		else{			
-			for (uint64_t i = 0; i < 2; i++){
-				sorted_index = sorted_list[init_input_dff_size + placed];			
-				input0_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[0];
-				input1_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[1];
-				type = read_circuit.gate_list[sorted_index - init_input_dff_size].type;
-				
-				if(((input0_index < 0)||(wires[input0_index] >= pipe_stg)) && ((input1_index < 0)||(wires[input1_index] >= pipe_stg))){
-					if((XOR_placed == false)&&((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE))){
-						placed++;
-						if(nonXOR_placed) cycles++;
-						wires[sorted_index] = pipe_stg;					
-						XOR_placed = true;
-						if (placed == read_circuit.gate_size) break;
-					}
-					else if(nonXOR_placed == false){
-						placed++;
-						if(XOR_placed) cycles++;
-						wires[sorted_index] = 1;				
-						nonXOR_placed = true;
-						if (placed == read_circuit.gate_size) break;
-					}
+			sorted_index = sorted_list[init_input_dff_size + placed];			
+			input0_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[0];
+			input1_index = read_circuit.gate_list[sorted_index - init_input_dff_size].input[1];
+			type = read_circuit.gate_list[sorted_index - init_input_dff_size].type;
+			
+			if(((input0_index < 0)||(wires[input0_index] >= pipe_stg)) && ((input1_index < 0)||(wires[input1_index] >= pipe_stg))){
+				placed++;
+				if((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE)){
+					mem_busy[cycles] = true;
+					wires[sorted_index] = pipe_stg;
+				}
+				else {
+					mem_busy[cycles+pipe_stg] = true;
+					wires[sorted_index] = 1;
 				}
 			}
 		}
@@ -218,7 +212,7 @@ int ComputeCycles(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, 
 	return cycles;	
 }
 
-int ComputeBLevels(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector<double>& b_level, uint64_t pipe_stg, bool bigB){
+int ComputeBLevels(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector<double>& b_level, uint64_t pipe_stg){
 	
 	int64_t init_input_size = read_circuit.get_init_input_size();
 	int64_t init_input_dff_size = init_input_size + read_circuit.dff_size;
@@ -252,7 +246,7 @@ int ComputeBLevels(const ReadCircuit &read_circuit, vector<int64_t> sorted_list,
 	return SUCCESS;
 }
 
-int ComputeBigBLevels(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector<double>& b_level, uint64_t pipe_stg, bool bigB){
+int ComputeBigBLevels(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector<double>& b_level, uint64_t pipe_stg){
 	
 	int64_t init_input_size = read_circuit.get_init_input_size();
 	int64_t init_input_dff_size = init_input_size + read_circuit.dff_size;
@@ -262,9 +256,7 @@ int ComputeBigBLevels(const ReadCircuit &read_circuit, vector<int64_t> sorted_li
 	vector<double> b_level_prev(init_input_dff_size + read_circuit.gate_size, 0);
 	
 	int64_t sorted_index, input0_index, input1_index;
-	short type;
-	
-	
+	short type;	
 	
 	for (uint64_t i = 0; i < read_circuit.gate_size; i++) {		
 		sorted_index = sorted_list[init_input_dff_size + i];
@@ -291,8 +283,7 @@ int ComputeBigBLevels(const ReadCircuit &read_circuit, vector<int64_t> sorted_li
 		b_level[i] = b_level_[0] + 1;
 	}	
 	
-	return SUCCESS;
-	
+	return SUCCESS;	
 }
 
 int Reorder(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector<int64_t>* reordered_list, uint64_t pipe_stg){
@@ -302,13 +293,12 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector
 	
 	int64_t sorted_index, input0_index, input1_index;
 	short type;
-	bool XOR_placed, nonXOR_placed;
 	
 	uint64_t cycles_before = ComputeCycles(read_circuit, sorted_list, pipe_stg);	
 		
 	vector<double> b_level;
-	//ComputeBLevels(read_circuit, sorted_list, b_level, pipe_stg, true);
-	ComputeBigBLevels(read_circuit, sorted_list, b_level, pipe_stg, true);
+	//ComputeBLevels(read_circuit, sorted_list, b_level, pipe_stg);
+	ComputeBigBLevels(read_circuit, sorted_list, b_level, pipe_stg);
 	
 	double CP = b_level[0];
 	for (uint64_t i = 0; i < b_level.size(); i++)
@@ -324,11 +314,17 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector
 		reordered_list->push_back(i);
 	}
 	
+	vector<bool> mem_busy(pipe_stg+1, false);	
 	uint64_t cycles = 0;
+	uint64_t stalls = 0;
+	
 	while (true) {
 		cycles++;	
-		XOR_placed = false;
-		nonXOR_placed = false;
+		mem_busy.push_back(false);		
+		if(mem_busy[cycles-1]) {
+			stalls++;
+			continue;
+		}
 		
 		for (uint64_t i = 0; i < init_input_dff_size + read_circuit.gate_size; i++) {
 			if(wires[i]) wires[i]++;
@@ -348,32 +344,32 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector
 				type = read_circuit.gate_list[sorted_index - init_input_dff_size].type;
 				
 				if(((input0_index < 0)||(wires[input0_index] >= pipe_stg)) && ((input1_index < 0)||(wires[input1_index] >= pipe_stg))){
-					if((XOR_placed == false)&&((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE))){
-						reordered_list->push_back(sorted_index);
-						if(nonXOR_placed) cycles++;
-						wires[sorted_index] = pipe_stg;					
-						XOR_placed = true;
+					reordered_list->push_back(sorted_index);
+					if((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE)){
+						mem_busy[cycles] = true;
+						wires[sorted_index] = pipe_stg;	
+						break;
 					}
-					else if(nonXOR_placed == false){
-						reordered_list->push_back(sorted_index);
-						if(XOR_placed) cycles++;
-						wires[sorted_index] = 1;				
-						nonXOR_placed = true;
+					else{
+						mem_busy[cycles+pipe_stg] = true;
+						wires[sorted_index] = 1;
+						break;
 					}
 				}
-				if(XOR_placed & nonXOR_placed) break;
 			}
 		}			
-	}
+	} 
 	
 	uint64_t cycles_after = cycles;
 	
 	LOG(INFO)	<< cycles_before << "\t"  
 				<< cycles_after << "\t" 
 				<< (double)cycles_before/(double)cycles_after << "\t"
-				<< (double)(cycles_before - read_circuit.gate_size)/cycles_before*100 << "%\t"
-				<< (double)(cycles_after - read_circuit.gate_size)/cycles_after*100 << "%\t" 
-				<< (((double)(cycles_before - read_circuit.gate_size)/cycles_before)-((double)(cycles_after - read_circuit.gate_size)/cycles_after))*100 << "%" << endl;
+				<< (double)read_circuit.gate_size/(double)cycles_before*100 << "%\t"
+				<< (double)read_circuit.gate_size/(double)cycles_after*100 << "%\t" 
+				<< ((double)read_circuit.gate_size/(double)cycles_after-(double)read_circuit.gate_size/(double)cycles_before)*100 << "%\t"
+				<< (double)stalls/(double)cycles_after*100 << "%\t" 
+				<< endl;
 
 	return SUCCESS; 	
 }
