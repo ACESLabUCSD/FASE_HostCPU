@@ -297,8 +297,8 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector
 	uint64_t cycles_before = ComputeCycles(read_circuit, sorted_list, pipe_stg);	
 		
 	vector<double> b_level;
-	//ComputeBLevels(read_circuit, sorted_list, b_level, pipe_stg);
-	ComputeBigBLevels(read_circuit, sorted_list, b_level, pipe_stg);
+	ComputeBLevels(read_circuit, sorted_list, b_level, pipe_stg);
+	//ComputeBigBLevels(read_circuit, sorted_list, b_level, pipe_stg);
 	
 	double CP = b_level[0];
 	for (uint64_t i = 0; i < b_level.size(); i++)
@@ -362,13 +362,9 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector
 	
 	uint64_t cycles_after = cycles;
 	
-	LOG(INFO)	<< cycles_before << "\t"  
+	LOG(INFO)	<< read_circuit.gate_size << "\t"  
+				<< cycles_before << "\t" 
 				<< cycles_after << "\t" 
-				<< (double)cycles_before/(double)cycles_after << "\t"
-				<< (double)read_circuit.gate_size/(double)cycles_before*100 << "%\t"
-				<< (double)read_circuit.gate_size/(double)cycles_after*100 << "%\t" 
-				<< ((double)read_circuit.gate_size/(double)cycles_after-(double)read_circuit.gate_size/(double)cycles_before)*100 << "%\t"
-				<< (double)stalls/(double)cycles_after*100 << "%\t" 
 				<< endl;
 
 	return SUCCESS; 	
