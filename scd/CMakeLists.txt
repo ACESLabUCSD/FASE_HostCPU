@@ -87,7 +87,7 @@ configure_file(
   "V2SCD_ALL.sh"
   @ONLY)
 
-add_custom_command(TARGET V2SCD_Main
-                   COMMAND
-                   sh ${CMAKE_CURRENT_BINARY_DIR}/V2SCD_ALL.sh)
+#add_custom_command(TARGET V2SCD_Main
+#                   COMMAND
+#                   sh ${CMAKE_CURRENT_BINARY_DIR}/V2SCD_ALL.sh)
 

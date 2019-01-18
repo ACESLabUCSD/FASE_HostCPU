@@ -1,11 +1,12 @@
 #!/bin/bash
 
-mkdir -p hw_aclrtr
+mkdir -p @CMAKE_CURRENT_BINARY_DIR@/hw_aclrtr
 for verilogfile in @CMAKE_CURRENT_BINARY_DIR@/netlists/*.v
 do
   hw_dir=$(basename "${verilogfile%.*}")
   scdfile=${verilogfile%.*}.scd
-  mkdir -p hw_aclrtr/$hw_dir
-  @CMAKE_CURRENT_BINARY_DIR@/V2SCD_Main -i $verilogfile -o $scdfile -w hw_aclrtr/$hw_dir/Netlist.hscd --log2std &
+  mkdir -p @CMAKE_CURRENT_BINARY_DIR@/hw_aclrtr/$hw_dir
+  echo $hw_dir
+  @CMAKE_CURRENT_BINARY_DIR@/V2SCD_Main -i $verilogfile -o $scdfile -w @CMAKE_CURRENT_BINARY_DIR@/hw_aclrtr/$hw_dir/Netlist.hscd --log2std
 done
 wait
