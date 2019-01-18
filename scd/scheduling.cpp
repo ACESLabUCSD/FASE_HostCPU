@@ -286,6 +286,41 @@ int ComputeBigBLevels(const ReadCircuit &read_circuit, vector<int64_t> sorted_li
 	return SUCCESS;	
 }
 
+int ComputeFanOut(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector<double>& b_level, uint64_t pipe_stg){
+	
+	int64_t init_input_size = read_circuit.get_init_input_size();
+	int64_t init_input_dff_size = init_input_size + read_circuit.dff_size;
+	
+	b_level.resize(init_input_dff_size + read_circuit.gate_size);	
+	memset(&b_level[0], 0, b_level.size() * sizeof b_level[0]);
+	
+	int64_t sorted_index, input0_index, input1_index;
+	short type;	
+	
+	for (uint64_t i = 0; i < read_circuit.gate_size; i++) {		
+		sorted_index = sorted_list[init_input_dff_size + i];
+		type = read_circuit.gate_list[sorted_index - init_input_dff_size].type;		
+		b_level[sorted_index] = nodeWeight(type, pipe_stg);	
+		
+		for (uint64_t j = i+1; j < read_circuit.gate_size; j++){
+			int64_t sorted_index_j = sorted_list[init_input_dff_size + j];
+			input0_index = read_circuit.gate_list[sorted_index_j - init_input_dff_size].input[0];
+			input1_index = read_circuit.gate_list[sorted_index_j - init_input_dff_size].input[1];
+			type = read_circuit.gate_list[sorted_index_j - init_input_dff_size].type;
+			if((input0_index == sorted_index)||(input1_index == sorted_index)){
+				b_level[sorted_index] += nodeWeight(type, pipe_stg);
+			}
+		}
+	}
+	
+	auto b_level_ = max_element(b_level.begin(), b_level.end());	
+	for (int64_t i = 0; i < init_input_dff_size; i++) {
+		b_level[i] = b_level_[0] + 1;
+	}	
+	
+	return SUCCESS;	
+}
+
 int Reorder(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector<int64_t>* reordered_list, uint64_t pipe_stg){
 	
 	int64_t init_input_size = read_circuit.get_init_input_size();
@@ -297,8 +332,9 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector
 	uint64_t cycles_before = ComputeCycles(read_circuit, sorted_list, pipe_stg);	
 		
 	vector<double> b_level;
-	ComputeBLevels(read_circuit, sorted_list, b_level, pipe_stg);
+	//ComputeBLevels(read_circuit, sorted_list, b_level, pipe_stg);
 	//ComputeBigBLevels(read_circuit, sorted_list, b_level, pipe_stg);
+	ComputeFanOut(read_circuit, sorted_list, b_level, pipe_stg);
 	
 	double CP = b_level[0];
 	for (uint64_t i = 0; i < b_level.size(); i++)
@@ -317,6 +353,7 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector
 	vector<bool> mem_busy(pipe_stg+1, false);	
 	uint64_t cycles = 0;
 	uint64_t stalls = 0;
+	uint64_t num_XOR = 0;
 	
 	while (true) {
 		cycles++;	
@@ -346,6 +383,7 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector
 				if(((input0_index < 0)||(wires[input0_index] >= pipe_stg)) && ((input1_index < 0)||(wires[input1_index] >= pipe_stg))){
 					reordered_list->push_back(sorted_index);
 					if((type == XORGATE)||(type == XNORGATE)||(type == NOTGATE)){
+						num_XOR++;
 						mem_busy[cycles] = true;
 						wires[sorted_index] = pipe_stg;	
 						break;
@@ -363,7 +401,8 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector
 	uint64_t cycles_after = cycles;
 	
 	LOG(INFO)	<< read_circuit.gate_size << "\t"  
-				<< cycles_before << "\t" 
+				<< num_XOR << "\t"
+				<< read_circuit.dff_size << "\t"
 				<< cycles_after << "\t" 
 				<< endl;
 

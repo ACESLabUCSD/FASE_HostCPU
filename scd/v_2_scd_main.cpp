@@ -102,10 +102,10 @@ int main(int argc, char** argv) {
 #endif
 
   if (!input_netlist_file.empty()) {
-    LOG(INFO) << "V2SCD " << input_netlist_file << " to " << output_scd_file << endl; 
+/*    LOG(INFO) << "V2SCD " << input_netlist_file << " to " << output_scd_file << endl; 
 #ifdef HW_ACLRTR
 	if(hscd) LOG(INFO) << "V2SCD " << input_netlist_file << " to " << output_hscd_file << endl; 
-#endif
+#endif*/
     if (Verilog2SCD(input_netlist_file, out_mapping_filename,
                     output_scd_file
 #ifdef HW_ACLRTR
