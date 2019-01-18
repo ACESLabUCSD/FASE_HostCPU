@@ -474,9 +474,13 @@ int SortNetlist(ReadCircuit *read_circuit,
           "input 1 is larger than gate id");
     }
   }
+  
   for (int64_t i = 0; i < (int64_t) read_circuit->output_size; i++) {
     read_circuit->output_list[i] = sorted_list_1[read_circuit->output_list[i]];
   }
+#ifdef HW_ACLRTR
+  sort(read_circuit->output_list.begin(), read_circuit->output_list.end());
+#endif
 
   if (read_circuit->terminate_id != 0) {
     read_circuit->terminate_id = sorted_list_1[read_circuit->terminate_id];

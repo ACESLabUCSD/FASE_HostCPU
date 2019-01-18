@@ -203,6 +203,9 @@ int WriteHSCD(const ReadCircuit& readCircuit, const string &fileName) {
   }
   
   string write_str;
+  
+  /*circuit parameters*/
+  
   vector<uint64_t> ckt_params(2);
   vector<uint16_t> ckt_params_bit_len(2, S);
   
@@ -233,39 +236,49 @@ int WriteHSCD(const ReadCircuit& readCircuit, const string &fileName) {
   write_str = formatGCInputString(ckt_params, ckt_params_bit_len);
   f << write_str << endl;
   
+  /*DFFs and gates*/
+  
+  uint64_t init_input_size = readCircuit.g_init_size + readCircuit.e_init_size + readCircuit.g_input_size  + readCircuit.e_input_size; 
+  uint64_t dff_gate_size = readCircuit.dff_size + readCircuit.gate_size;   
+  vector<uint64_t> is_output(dff_gate_size, 0); 
+	
+  uint64_t k = 0;
+  
+  for (uint64_t i = 0; i < readCircuit.dff_size; i++){ 
+	if ((i+init_input_size) == readCircuit.output_list[k]){
+			is_output[i] = 1;
+			k++;
+		}  
+  }	  
+  
+  int gindex; 
+  
+  for (uint64_t i = 0; i < readCircuit.gate_size; i++){
+	gindex = readCircuit.task_schedule[i];  
+	if ((i+init_input_size+readCircuit.dff_size) == readCircuit.output_list[k]){
+			is_output[gindex+readCircuit.dff_size] = 1;
+			k++;
+		}  
+  }	
+  
   vector<uint64_t> gate_info(4);
   vector<uint16_t> gate_info_bit_len{S-1, S, 4, 1};
   
   gate_info[2] = DFFGATE;
-  gate_info[3] = 0;
   for (uint64_t i = 0; i < readCircuit.dff_size; i++) {
 		gate_info[0] = readCircuit.dff_list[i].input[0];  //D
 		gate_info[1] = readCircuit.dff_list[i].input[1];  //I
+		gate_info[3] = is_output[i];
 		write_str = formatGCInputString(gate_info, gate_info_bit_len);
 		f << write_str << endl;
-  }
-   
-  vector<uint64_t> sorted_output_list{readCircuit.output_list};
-  sort(sorted_output_list.begin(), sorted_output_list.end());
-  vector<uint64_t> is_output(readCircuit.gate_size, 0);  
-  uint64_t init_input_dff_size = readCircuit.g_init_size + readCircuit.e_init_size + readCircuit.g_input_size 
-									+ readCircuit.e_input_size + readCircuit.dff_size;     
-  int gindex; 
-	
-  uint64_t k = 0;
-  for (uint64_t i = 0; i < readCircuit.gate_size; i++){
-	gindex = readCircuit.task_schedule[i];  
-	if ((i+init_input_dff_size) == sorted_output_list[k]){
-			is_output[gindex] = 1;
-			k++;
-		}  
-  }	   
+  }  
+  
   for (uint64_t i = 0; i < readCircuit.gate_size; i++) {
 		gindex = readCircuit.task_schedule[i];
 	    gate_info[0] = readCircuit.gate_list[gindex].input[0];
 		gate_info[1] = readCircuit.gate_list[gindex].input[1];
 	    gate_info[2] = readCircuit.gate_list[gindex].type;
-		gate_info[3] = is_output[gindex];
+		gate_info[3] = is_output[gindex+readCircuit.dff_size];
 		write_str = formatGCInputString(gate_info, gate_info_bit_len);
 		f << write_str << endl;
   }
