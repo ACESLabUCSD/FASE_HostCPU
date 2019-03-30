@@ -54,7 +54,7 @@ The format consists of (`4+dff_size+gate_size`) number of lines each holding a 3
 | 1 | -, `e_input_size`, `g_input_size` | 4, 14, 14  |
 | 1 | -,  `dff_size`, `output_size` | 4, 14, 14  |
 | 1 | -, `XOR_size` , `gate_size`| 4, 14, 14  |
-| `dff_size` | `D`, `I`, -1, 0 | 13, 14, 4, 1 |
+| `dff_size` | `D`, `I`, -1, `is_output` | 13, 14, 4, 1 |
 | `gate_size` | `input0`, `input1`, `type`, `is_output` | 13, 14, 4, 1 | 
 
 `is_output` is a Boolean value that indicates whether or not the gate's output is also a circuit output.  
