@@ -20,6 +20,25 @@ and must be connected to Flip-Flops’ `I` (initial) ports.
 bit-width should be multiplied by number of clock cycles.
 It is also true for `o` port which will be provided at every clock cycle.
 
+All the init bits from the garbler are concatenated to form a single input `g_init`. 
+Similar concatenations are done for `e_init`, `g_input`,`e_input`, and `o`.
+The module structure is as follows. 
+
+```
+module _name_ ( 
+  input 	clk, rst,
+  input [K-1:0] g_init,
+  input [L-1:0] e_init, 
+  input [M-1:0] g_input,
+  input [N-1:0] e_input,
+  output [P-1:0] o
+  );
+  
+  //description
+  
+endmodule 
+```
+
 ## Wire Indexing
 Wires are indexed according to this order:  
 1- g_init  
@@ -54,7 +73,7 @@ The format consists of (`4+dff_size+gate_size`) number of lines each holding a 3
 | 1 | -, `e_input_size`, `g_input_size` | 4, 14, 14  |
 | 1 | -,  `dff_size`, `output_size` | 4, 14, 14  |
 | 1 | -, `XOR_size` , `gate_size`| 4, 14, 14  |
-| `dff_size` | `D`, `I`, -1, 0 | 13, 14, 4, 1 |
+| `dff_size` | `D`, `I`, -1, `is_output` | 13, 14, 4, 1 |
 | `gate_size` | `input0`, `input1`, `type`, `is_output` | 13, 14, 4, 1 | 
 
 `is_output` is a Boolean value that indicates whether or not the gate's output is also a circuit output.  
