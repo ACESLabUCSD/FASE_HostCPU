@@ -117,6 +117,4 @@ int Verilog2SCD(const string &in_file_name, const string& out_mapping_filename,
 			  , bool hscd, const string &output_hscd_file, uint64_t pipe_stg
 #endif
 				);
-int Bris2SCD(const string &in_file_name, const string& out_mapping_filename,
-             const string &out_file_name);
 #endif

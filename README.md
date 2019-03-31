@@ -33,7 +33,7 @@ TinyGarble main binary: `garbled_circuit/TinyGarble`
   -w [ --acc ]                          There is a HW accelerator generating
                                         the garbled tables.
   -d [ --acc_dir ] arg (=/hw_aclrtr)    Directory of HW accelerator generated
-                                        the garbled tables.
+                                        garbled tables.
   --output_mode arg (=0)                0: normal, 1:separated by clock 2:last
                                         clock.
 ```
@@ -44,9 +44,6 @@ To generate the netlist from the synthesized Verilog files run `scd/V2SCD_Main`
 ```
   -h [ --help ]               produce help message.
   -i [ --netlist ] arg        Input netlist (verilog .v) file address.
-  -b [ --brist_netlist ] arg  Input netlist (.txt) file address (in the format
-                              given by www.cs.bris.ac.uk/Research/CryptographyS
-                              ecurity/MPC/).
   -o [ --scd ] arg            Output simple circuit description (scd) file
                               address.
   -w [ --hscd ] arg           Output hardware simple circuit description (hscd)

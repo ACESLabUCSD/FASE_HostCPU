@@ -52,9 +52,6 @@ int main(int argc, char** argv) {
   ("help,h", "produce help message.")  //
   ("netlist,i", po::value<string>(&input_netlist_file),
    "Input netlist (verilog .v) file address.")  //
-  ("brist_netlist,b", po::value<string>(&brist_input_netlist_file),
-   "Input netlist (.txt) file address (in the format given by "
-   "www.cs.bris.ac.uk/Research/CryptographySecurity/MPC/).")  //
   ("scd,o", po::value<string>(&output_scd_file),
    "Output simple circuit description (scd) file address.")  //
 #ifdef HW_ACLRTR 
@@ -113,14 +110,6 @@ int main(int argc, char** argv) {
 #endif	
 					) == FAILURE) {
       LOG(ERROR) << "Verilog to SCD failed." << endl;
-      return FAILURE;
-    }
-  } else if (!brist_input_netlist_file.empty()) {
-    LOG(INFO) << "Brist2SCD " << brist_input_netlist_file << " to "
-              << output_scd_file << endl;
-    if (Bris2SCD(brist_input_netlist_file, out_mapping_filename,
-                 output_scd_file) == FAILURE) {
-      LOG(ERROR) << "Brist netlist to SCD failed." << endl;
       return FAILURE;
     }
   } else {

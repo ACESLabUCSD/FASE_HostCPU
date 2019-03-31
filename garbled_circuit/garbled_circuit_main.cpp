@@ -190,7 +190,7 @@ int main(int argc, char* argv[]) {
 	("acc,w", "There is a HW accelerator generating the garbled tables.")  //
 	("acc_dir,d",
    po::value<string>(&acc_file_address)->default_value(string(TINYGARBLE_SOURCE_DIR)+"/hw_aclrtr"),
-   "Directory of HW accelerator generated the garbled tables.")  //
+   "Directory of HW accelerator generated garbled tables.")  //
 #endif
   ("output_mode", po::value<int>(&output_mode)->default_value(0),
    "0: normal, 1:separated by clock 2:last clock.");
