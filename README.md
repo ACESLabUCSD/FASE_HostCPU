@@ -114,9 +114,9 @@ To turn on the binary mode undefine `HW_ACLRTR_TEXT_IO` in `garbled_circuit/garb
 To convert text files to binary, run `util/txt2bin`
 ```
   -h [ --help ]                         produce help message
-  -t [ --text ] arg (=/home/siam/git/hostCPU_TG/hw_aclrtr/Labels.txt)
+  -t [ --text ] arg (=bin/scd/hw_aclrtr/Labels.txt)
                                         text file
-  -b [ --bin ] arg (=/home/siam/git/hostCPU_TG/hw_aclrtr/Labels.bin)
+  -b [ --bin ] arg (=bin/scd/hw_aclrtr/Labels.bin)
                                         binary file
   -n [ --num_block ] arg (=512)         number of blocks
   -r [ --bin2text ]                     binary to text conversion, the default
