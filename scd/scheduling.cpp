@@ -329,7 +329,7 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector
 	int64_t sorted_index, input0_index, input1_index;
 	short type;
 	
-	uint64_t cycles_before = ComputeCycles(read_circuit, sorted_list, pipe_stg);	
+	//uint64_t cycles_before = ComputeCycles(read_circuit, sorted_list, pipe_stg);	
 		
 	vector<double> b_level;
 	//ComputeBLevels(read_circuit, sorted_list, b_level, pipe_stg);
@@ -401,7 +401,8 @@ int Reorder(const ReadCircuit &read_circuit, vector<int64_t> sorted_list, vector
 	uint64_t cycles_after = cycles;
 	
 	LOG(INFO)	<< read_circuit.gate_size << "\t"  
-				<< num_XOR << "\t"
+				<< num_XOR << "\t"  
+				<< read_circuit.gate_size - num_XOR << "\t"
 				<< read_circuit.dff_size << "\t"
 				<< cycles_after << "\t" 
 				<< endl;
